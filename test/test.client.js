@@ -1,5 +1,32 @@
-var socket = io('http://localhost:7777');
+var socket = io('http://localhost:7777')
+  , originalOn = socket.constructor.prototype.on
+  , originalEmit = socket.constructor.prototype.emit
+  ;
 
+/**
+ * Fake symetric delay on the ping
+ * Needs to be symetric to test all aspects of synchronization
+ */
+var currentDelay = 0
+
+socket.constructor.prototype.on = function (evt, handler) {
+  originalOn.call(socket, evt, function (data) {
+    setTimeout(function () {
+      handler(data);
+    }, currentDelay);
+  });
+};
+
+socket.constructor.prototype.emit = function (evt, data) {
+  setTimeout(function () {
+    originalEmit.call(socket, evt, data);
+  }, currentDelay);
+};
+
+
+/**
+ * Utilities
+ */
 function getQueryString () {
   var qs = window.location.href.match(/[^\?]+\?(.+)/);
   if (!qs) { return {}; }
@@ -12,13 +39,17 @@ function getQueryString () {
   return res;
 }
 
+
+/**
+ * Ping
+ */
+socket.on('ping', function (data) { socket.emit('pong', data); });
+
+
+
+
+// Initialization
 var qs = getQueryString();
 var delay = parseInt(qs.delay, 10) || 0;   // Ping delay for testing purposes
-
-socket.on('ping', function (data) {
-  var d = Date.now();
-  setTimeout(function () {
-    socket.emit('pong', data);
-  }, delay);
-});
+currentDelay = delay;
 
