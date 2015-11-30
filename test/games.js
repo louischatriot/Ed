@@ -12,8 +12,8 @@ realtime.on('player.ready', function (data) {
 
   var socket = data.socket;
 
-  games[socket.id] = new GameEngine();
-  socket.emit('game.begun');
+  games[socket.id] = new GameEngine({ level: { numControlPoints: 5, totalTime: 40000 } });
+  socket.emit('game.begun', { level: games[socket.id].level });
 
   socket.on('action', function () {
     games[socket.id].receiveCommand(socket.id, Date.now() - (realtime.getPing(socket) / 2));

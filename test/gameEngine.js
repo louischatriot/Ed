@@ -1,16 +1,12 @@
+/**
+ * Constructor
+ */
 function GameEngine (_options) {
   var options = _options || {};
   this.beginning = options.beginning || Date.now();
-  //this.generateLevel(options.level);
-
-  //console.log('LEVEL');
-  //console.log(this.level);
-
-  //socket.on('action', function () {
-    //var time = Date.now() - self.beginning;
-    //console.log('New action received at time: ' + time + ' - adjusted for ping: ' + (time - pings[socket.id] / 2));
-  //});
+  this.generateLevel(options.level);
 }
+
 
 /**
  * Generate new level
@@ -23,18 +19,18 @@ GameEngine.prototype.generateLevel = function (level) {
     return;
   }
 
-  var controlPoints = [], beg, point, time = 0;
+  var controlPoints = [], point, time = 0;
   for (var i = 0; i < level.numControlPoints; i += 1) {
-    beg = Math.floor(11 * Math.random());
-    controlPoints.push(beg);
-    time += beg + 3;
+    time += Math.floor(7 * Math.random()) + 2;
+    controlPoints.push(time);
+    time += 3;
   }
 
   this.level = [];
-  for (i = 0; i < level.totalTime; i += 1) {
+  for (i = 0; i < level.numControlPoints; i += 1) {
     point = {};
-    point.beginning = controlPoints[i] * totalTime / time;
-    point.end = point.beginning + (3 * totalTime / time);
+    point.beginning = controlPoints[i] * level.totalTime / time;
+    point.end = point.beginning + (3 * level.totalTime / time);
     this.level.push(point);
   }
 };
@@ -45,6 +41,14 @@ GameEngine.prototype.generateLevel = function (level) {
  */
 GameEngine.prototype.receiveCommand = function (player, time) {
   console.log("Received command from player " + player + " at time offset: " + (time - this.beginning));
+};
+
+
+/**
+ * Explicit name ...
+ */
+GameEngine.prototype.getLocalTime = function () {
+  return Date.now() - this.beginning;
 };
 
 
