@@ -43,7 +43,25 @@ function getQueryString () {
 /**
  * Ping
  */
-socket.on('ping', function (data) { socket.emit('pong', data); });
+socket.on('ping', function (data) {
+  if (data.formerPing) { document.getElementById('ping').innerHTML = 'Ping (ms): ' + data.formerPing; }
+  socket.emit('pong', data);
+});
+
+
+/**
+ * Game
+ */
+var beginning = Date.now();
+
+document.onkeydown = function (e) {
+  if (e.keyCode === 32) {
+    var time = Date.now() - beginning;
+    document.getElementById('actions').innerHTML += 'Action sent at time: ' + time + '<br>';
+
+    socket.emit('action');
+  }
+};
 
 
 
