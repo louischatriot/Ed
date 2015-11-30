@@ -50,18 +50,22 @@ socket.on('ping', function (data) {
 
 
 /**
- * Game
+ * Launch game once created on server
  */
-var beginning = Date.now();
+socket.on('game.begun', function (data) {
+  console.log("Received game from server");
 
-document.onkeydown = function (e) {
-  if (e.keyCode === 32) {
-    var time = Date.now() - beginning;
-    document.getElementById('actions').innerHTML += 'Action sent at time: ' + time + '<br>';
+  var gameEngine = new GameEngine();
 
-    socket.emit('action');
-  }
-};
+  document.onkeydown = function (e) {
+    if (e.keyCode === 32) {
+      gameEngine.receiveCommand('self', Date.now());
+      socket.emit('action');
+    }
+  };
+});
+
+
 
 
 
@@ -70,4 +74,5 @@ document.onkeydown = function (e) {
 var qs = getQueryString();
 var delay = parseInt(qs.delay, 10) || 0;   // Ping delay for testing purposes
 currentDelay = delay;
+socket.emit('player.ready');
 
