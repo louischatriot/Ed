@@ -6,3 +6,4 @@ node_modules
 client/hooks
 client/platforms
 client/plugins
+client/release
