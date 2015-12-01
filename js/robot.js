@@ -1,11 +1,11 @@
 
 
-function Robot(currentTile,level,speed) {
+function Robot(currentTile,level,speed,isEnnemy) {
   this.level=level; //the level the Robot is currently playing in
   this.currentTile=currentTile;
   this.distanceToNextTile=level.tileSize; //The distance between the Robot and the next Tile. Decreases with time.
-  this.x=currentTile.i*level.tileSize+level.tileSize/2;
-  this.y=currentTile.j*level.tileSize+level.tileSize/2;
+  this.x=currentTile.x;
+  this.y=currentTile.y;
   this.direction=0; //0=right, 1=up, 2=left, 3=down
 
   this.radius=level.robotRadius;
@@ -17,31 +17,32 @@ function Robot(currentTile,level,speed) {
 
   this.speedRadiusIncrease=(level.maxJumpingRadius-this.radius)*2*this.speed/level.tileSize; //Speed at which the robot increases during a jump. Just an animation parameter
 
-	this.color=robotColor;
-	this.ennemy=false; //Is it a player or an ennemy?
+	this.color=level.robotColor;
+	this.ennemy=isEnnemy; //Is it a player or an ennemy?
 
   this.AIControlled=false; //controlled by an AI?
-  EventEmitter.call(this); //EventEmitter tutorial suggest to include this. I'm not sure why.
+  this.level.ennemyTable.push(this);
+  //EventEmitter.call(this); //EventEmitter tutorial suggest to include this. I'm not sure why.
 }
 
-Robot.prototype = new EventEmitter; //inherit from eventemitter class
+//Robot.prototype = new EventEmitter; //inherit from eventemitter class
 
 Robot.prototype.draw=function() {
   //draw the given robot on the canvas
 		cxt.beginPath();
-		cxt.arc(this.x-cameraX,this.y-cameraY,this.radius,0,2*Math.PI);
+		cxt.arc(this.x-this.level.cameraX,this.y-this.level.cameraY,this.radius,0,2*Math.PI);
 		cxt.fillStyle = this.color;
 		cxt.closePath();
 		cxt.fill();
 }
 
-Robot.prototype.nextTile() {
-  var i=currentTile.i;
-  var j=currentTile.j;
-  if (this.direction==0 && i<level.tileTableWidth-1) return level.tileTable[i+1][j];
-  else if (this.direction==2 && i>0) return level.tileTable[i-1][j];
-  else if (this.direction==1 && j<level.tileTableHeight-1) return level.tileTable[i][j+1];
-  else if (this.direction==3 && j>0) return level.tileTable[i][j-1];
+Robot.prototype.nextTile=function() {
+  var i=this.currentTile.i;
+  var j=this.currentTile.j;
+  if (this.direction==0 && i<this.level.tileTableWidth-1) return this.level.tileTable[i+1][j];
+  else if (this.direction==2 && i>0) return this.level.tileTable[i-1][j];
+  else if (this.direction==1 && j>0) return this.level.tileTable[i][j-1];
+  else if (this.direction==3 && j<this.level.tileTableHeight-1) return this.level.tileTable[i][j+1];
 }
 
 
@@ -53,15 +54,104 @@ Robot.prototype.reposition=function(tile) {
 	this.distanceToNextTile=level.tileSize;
 }
 
+Robot.prototype.startAJump=function(tile) {
+  this.jumping=true;
+}
+
 
 Robot.prototype.lost=function() {
   this.emit('dead'); //warn whoever is listening (at least the level that created the player) that the player just died.
 }
 
+
+var nextDirection=function(jumping,currentDirection,tile) {
+  //Returns the next direction for a given intersection
+  if (currentDirection == 0) {
+      //going to the right
+      if (jumping && tile.rightWall != 2) {
+          return 0;
+      }
+      else {
+          if (tile.downWall == 0) {
+              return 3;
+          }
+          else if (tile.rightWall == 0) {
+              return 0;
+          }
+          else if (tile.upWall == 0) {
+              return 1;
+          }
+          else {
+              return 2;
+          }
+      }
+  }
+
+  else if (currentDirection == 1) {
+      //going up
+      if (jumping && tile.upWall != 2) {
+          return 1;
+      }
+      else {
+          if (tile.rightWall == 0) {
+              return 0;
+          }
+          else if (tile.upWall == 0) {
+              return 1;
+          }
+          else if (tile.leftWall == 0) {
+              return 2;
+          }
+          else {
+              return 3;
+          }
+      }
+  }
+  else if (currentDirection == 2) {
+      //going left
+      if (jumping && tile.leftWall != 2) {
+          return 2;
+      }
+      else {
+          if (tile.upWall == 0) {
+              return 1;
+          }
+          else if (tile.leftWall == 0) {
+              return 2;
+          }
+          else if (tile.downWall == 0) {
+              return 3;
+          }
+          else {
+              return 0;
+          }
+      }
+  }
+  else if (currentDirection == 3) {
+      //going down
+      if (jumping && tile.downWall != 2) {
+          return 3;
+      }
+      else {
+          if (tile.leftWall == 0) {
+              return 2;
+          }
+          else if (tile.downWall == 0) {
+              return 3;
+          }
+          else if (tile.rightWall == 0) {
+              return 0;
+          }
+          else {
+              return 1;
+          }
+      }
+  }
+  return currentDirection;
+}
+
 Robot.prototype.updatePosition=function(timeGap) {
   //called at every loop. timeGap is the time since the Robot was last updated.
-    var now=Date.now();
-
     if (this.jumping) {
       if (this.jumpingUp) {
         if (this.radius<this.maxJumpingRadius) this.radius=this.radius+(timeGap)*this.speedRadiusIncrease;
@@ -80,93 +170,26 @@ Robot.prototype.updatePosition=function(timeGap) {
 
     var movement=(timeGap)*this.speed;
 
-    if (movement<distanceToNextCenter) {
+    if (movement<this.distanceToNextTile) {
       //keep going in the same direction
       this.distanceToNextTile-=movement;
-      if (direction==0) this.x+=movement;
-      else if (direction==1) this.y+=movement;
-      else if (direction==2) this.x-=movement;
-      else if (direction==3) this.y-=movement;
+      if (this.direction==0) this.x+=movement;
+      else if (this.direction==1) this.y-=movement;
+      else if (this.direction==2) this.x-=movement;
+      else if (this.direction==3) this.y+=movement;
     }
     else {
-      //need to change direction
-
+      //going by an intersection
+      var next=this.nextTile();
+      var newDirection=nextDirection(this.jumping,this.direction,next);
+      console.log(newDirection);
+      this.currentTile=next; //move to a new tile
+      this.direction = newDirection;
+      var movementLeft=movement-this.distanceToNextTile;
+      this.distanceToNextTile=this.level.tileSize-movementLeft;
+      if (this.direction==0) this.x=this.currentTile.x+movementLeft;
+      else if (this.direction==1) this.y=this.currentTile.y-movementLeft;
+      else if (this.direction==2) this.x=this.currentTile.x-movementLeft;
+      else if (this.direction==3) this.y=this.currentTile.y+movementLeft;
     }
-
-    var newX=this.x+plusX;
-    var newY=this.y+plusY;
-    if (Math.abs(plusX)>this.distanceToNextCenter || Math.abs(plusY)>this.distanceToNextCenter) {
-      this.x=s.i*cellSize+cellSize/2;
-      this.y=s.j*cellSize+cellSize/2;
-      this.distanceToNextCenter=cellSize;
-      //Now figure out where the ball should go
-      if (this.directionX>0 && s.rightWall) {
-        if (s.downWall) {
-          if (s.upWall) {
-            this.directionX=-1;
-          }
-          else {
-            this.directionX=0;
-            this.directionY=-1;
-          }
-        }
-        else {
-          this.directionX=0;
-          this.directionY=1;
-        }
-      }
-      else if (this.directionX<0 && s.leftWall) {
-        if (s.upWall) {
-          if (s.downWall) {
-            this.directionX=1;
-          }
-          else {
-            this.directionX=0;
-            this.directionY=1;
-          }
-        }
-        else {
-          this.directionX=0;
-          this.directionY=-1;
-        }
-      }
-      else if (this.directionY>0 && s.downWall) {
-        if (s.leftWall) {
-          if (s.rightWall) {
-            this.directionY=-1;
-          }
-          else {
-            this.directionX=1;
-            this.directionY=0;
-          }
-        }
-        else {
-          this.directionX=-1;
-          this.directionY=0;
-        }
-      }
-      else if (this.directionY<0 && s.upWall) {
-        if (s.rightWall) {
-          if (s.leftWall) {
-            this.directionY=1;
-          }
-          else {
-            this.directionX=-1;
-            this.directionY=0;
-          }
-        }
-        else {
-          this.directionX=1;
-          this.directionY=0;
-        }
-      }
-
-    }
-    else {
-      this.x=newX;
-      this.y=newY;
-      this.distanceToNextCenter=this.distanceToNextCenter-Math.abs(plusX)-Math.abs(plusY);
-    }
-    }
-    this.lastTime=now;
   }
