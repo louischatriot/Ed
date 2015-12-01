@@ -2,3 +2,7 @@ node_modules
 *.swp
 *.swo
 *~
+
+client/hooks
+client/platforms
+client/plugins
