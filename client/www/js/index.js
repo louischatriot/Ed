@@ -1,51 +1,41 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-var app = {
-    // Application Constructor
-    initialize: function() {
-        this.bindEvents();
-    },
-    // Bind Event Listeners
-    //
-    // Bind any events that are required on startup. Common events are:
-    // 'load', 'deviceready', 'offline', and 'online'.
-    bindEvents: function() {
-        document.addEventListener('deviceready', this.onDeviceReady, false);
-    },
-    // deviceready Event Handler
-    //
-    // The scope of 'this' is the event. In order to call the 'receivedEvent'
-    // function, we must explicitly call 'app.receivedEvent(...);'
-    onDeviceReady: function() {
-        app.receivedEvent('deviceready');
-    },
-    // Update DOM on a Received Event
-    receivedEvent: function(id) {
-        var parentElement = document.getElementById(id);
-        var listeningElement = parentElement.querySelector('.listening');
-        var receivedElement = parentElement.querySelector('.received');
+// Create the canvas
+var canvas = document.createElement("canvas");
+canvas.style.border = "none";
+var cxt = canvas.getContext("2d");
 
-        listeningElement.setAttribute('style', 'display:none;');
-        receivedElement.setAttribute('style', 'display:block;');
+canvas.width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+canvas.height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
-        console.log('Received Event: ' + id);
-    }
+
+document.body.appendChild(canvas);
+document.body.appendChild(canvas);
+
+var tileSize=30;
+
+if((navigator.userAgent.match(/iPhone/i)) || (navigator.userAgent.match(/iPod/i))) {
+  //if user is playing from an iphone. The phone tends to zoom out. This is one dirty fix. Maybe there is another way?
+	tileSize=60;
+	lineWidth=5;
+}
+
+var tileTableWidth=Math.floor(canvas.width/tileSize); //size of the level
+var tileTableHeight=Math.floor(canvas.height/tileSize); //size of the level
+
+var screenTableHeight=Math.floor(canvas.height/tileSize);
+var screenTableWidth=Math.floor(canvas.width/tileSize);
+
+
+
+var theLevel=new Level(tileSize,tileTableWidth,tileTableHeight);
+theLevel.createNewLevel();
+theLevel.addANewPlayer();
+//console.log(theLevel.tileTable);
+
+var mDown=false; //is the user currently clicking
+
+var main = function () {
+	theLevel.update();
 };
 
-app.initialize();
+
+setInterval(main, 20);
