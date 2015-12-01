@@ -1,7 +1,7 @@
 var http = require('http')
   , app = http.createServer(globalHandler)
   , config = require('./lib/config')
-  , games = require('./test/games')
+  , games = require('./lib/games')
   ;
 
 function globalHandler (req, res) {
@@ -23,5 +23,5 @@ process.on('uncaughtException', function (err) {
 });
 
 // Tie socket.io to our HTTP server and launch it
-require('./test/realtime').initialize(app);
+require('./lib/realtime').initialize(app);
 app.listen(config.serverPort);
