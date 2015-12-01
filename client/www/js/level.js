@@ -19,19 +19,25 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
   this.robotRadius=tileSize/2;
   this.ennemyColor="#7f8c8d";
   this.robotColor="#2c3e50";
-  this.robotRadius=tileSize/5;
+  this.robotRadius=this.tileSize/5;
   this.lineWidth=2; //The width of the walls to draw
   this.wallColor="#2c3e50";
   this.cameraX=0; //when the camera moves
   this.cameraY=0; //when the camera moves
 
   this.maxEnnemyPerRow;
-  this.maxJumpingRadius=robotRadius*1.3; //max of the Robot radius during a jump
+  this.maxJumpingRadius=this.robotRadius*1.3; //max of the Robot radius during a jump
   this.lastTime=Date.now(); //use for gaps in rendering
   this.currentlyPlaying=true; //are we paused?
 
 }
 
+Level.prototype.startTouch=function() {
+  this.playerTable[0].startAJump();
+}
+Level.prototype.endTouch=function() {
+  //do nothing for now.
+}
 
 Level.prototype.addANewPlayer=function() {
   var newPlayer= new Robot(this.tileTable[0][0],this,this.playerSpeed,false); //creates a new player on the origin tile

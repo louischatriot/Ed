@@ -11,11 +11,13 @@ function Robot(currentTile,level,speed,isEnnemy) {
   this.radius=level.robotRadius;
 
 	this.jumping=false;
+  this.jumpingUp=true; //each jump has two sequences. One up, one down.
+
 	this.lastTime=Date.now();
 	this.jumpingUp=true; //For the jumping sequence
 	this.speed=speed; //Different robots may have different speeds
 
-  this.speedRadiusIncrease=(level.maxJumpingRadius-this.radius)*2*this.speed/level.tileSize; //Speed at which the robot increases during a jump. Just an animation parameter
+  this.speedRadiusIncrease=(this.level.maxJumpingRadius-this.radius)*2*this.speed/level.tileSize; //Speed at which the robot increases during a jump. Just an animation parameter
 
 	this.color=level.robotColor;
 	this.ennemy=isEnnemy; //Is it a player or an ennemy?
@@ -56,6 +58,7 @@ Robot.prototype.reposition=function(tile) {
 
 Robot.prototype.startAJump=function(tile) {
   this.jumping=true;
+  console.log('jumping');
 }
 
 
@@ -154,13 +157,13 @@ Robot.prototype.updatePosition=function(timeGap) {
   //called at every loop. timeGap is the time since the Robot was last updated.
     if (this.jumping) {
       if (this.jumpingUp) {
-        if (this.radius<this.maxJumpingRadius) this.radius=this.radius+(timeGap)*this.speedRadiusIncrease;
+        if (this.radius<this.level.maxJumpingRadius) this.radius=this.radius+(timeGap)*this.speedRadiusIncrease;
         else this.jumpingUp=false;
       }
       if (!this.jumpingUp){
-        if (this.radius>level.robotRadius) this.radius=this.radius-(timeGap)*speedRadiusIncrease;
+        if (this.radius>this.level.robotRadius) this.radius=this.radius-(timeGap)*this.speedRadiusIncrease;
         else {
-          this.radius=level.robotRadius;
+          this.radius=this.level.robotRadius;
           this.jumping=false;
           this.jumpingUp=true;
         }

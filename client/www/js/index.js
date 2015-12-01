@@ -30,6 +30,27 @@ theLevel.createNewLevel();
 theLevel.addANewPlayer();
 //console.log(theLevel.tileTable);
 
+var startTouch=function(e) {
+	e.preventDefault(); //preventing the touch from sliding the screen on mobile.
+	theLevel.startTouch();
+}
+var endTouch=function(e) {
+	//not being called right now.
+	e.preventDefault();
+	theLevel.endTouch();
+}
+
+//addEventListener('mouseup', endTouch, true);
+//addEventListener('touchend', endTouch, true);
+//addEventListener("keyUp", endTouch,true);
+
+document.onkeydown = startTouch;
+document.onmousedown = startTouch;
+document.ontouchstart = startTouch;
+
+
+
+
 var mDown=false; //is the user currently clicking
 
 var main = function () {
