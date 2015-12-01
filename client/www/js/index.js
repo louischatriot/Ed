@@ -8,7 +8,6 @@ canvas.height = Math.max(document.documentElement.clientHeight, window.innerHeig
 
 
 document.body.appendChild(canvas);
-document.body.appendChild(canvas);
 
 var tileSize=30;
 
