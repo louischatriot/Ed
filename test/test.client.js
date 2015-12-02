@@ -1,6 +1,8 @@
 var socket = io('http://localhost:7777')
   , originalOn = socket.constructor.prototype.on
   , originalEmit = socket.constructor.prototype.emit
+  , pingWasUndefined = true
+  , ping
   ;
 
 /**
@@ -44,7 +46,14 @@ function getQueryString () {
  * Ping
  */
 socket.on('ping', function (data) {
-  if (data.formerPing) { document.getElementById('ping').innerHTML = 'Ping (ms): ' + data.formerPing; }
+  if (data.formerPing) {
+    ping = data.formerPing;
+    document.getElementById('ping').innerHTML = 'Ping (ms): ' + ping;
+    if (pingWasUndefined) {   // There should be a better way, with once event emitter
+      pingWasUndefined = false;
+      playerIsReady();
+    }
+  }
   socket.emit('pong', data);
 });
 
@@ -55,6 +64,7 @@ socket.on('ping', function (data) {
 socket.on('game.begun', function (data) {
   console.log("Received game from server");
 
+  data.beginning = Date.now() - ping / 2;
   var gameEngine = new GameEngine(data);
   var totalTime = gameEngine.level[gameEngine.level.length - 1].end;
 
@@ -97,5 +107,8 @@ socket.on('game.begun', function (data) {
 var qs = getQueryString();
 var delay = parseInt(qs.delay, 10) || 0;   // Ping delay for testing purposes
 currentDelay = delay;
-socket.emit('player.ready');
+
+function playerIsReady () {
+  socket.emit('player.ready');
+}
 

@@ -1,5 +1,6 @@
 /**
  * Constructor
+ * @param {Number} options.beginning local timestamp corresponding to point in time when game began. Driven by server, adjusted for ping on client
  */
 function GameEngine (_options) {
   var options = _options || {};
