@@ -6,7 +6,7 @@ function Robot(currentTile,level,speed,isEnnemy) {
   this.distanceToNextTile=level.tileSize; //The distance between the Robot and the next Tile. Decreases with time.
   this.x=currentTile.x;
   this.y=currentTile.y;
-  this.direction=0; //0=right, 1=up, 2=left, 3=down
+  this.direction=nextDirection(false,0,currentTile); //0=right, 1=up, 2=left, 3=down
 
   this.radius=level.robotRadius;
 
@@ -20,10 +20,12 @@ function Robot(currentTile,level,speed,isEnnemy) {
   this.speedRadiusIncrease=(this.level.maxJumpingRadius-this.radius)*2*this.speed/level.tileSize; //Speed at which the robot increases during a jump. Just an animation parameter
 
 	this.color=level.robotColor;
-	this.ennemy=isEnnemy; //Is it a player or an ennemy?
+  if (isEnnemy) {
+    this.color=level.ennemyColor;
+  }
+	this.isEnnemy=isEnnemy; //Is it a player or an ennemy?
 
   this.AIControlled=false; //controlled by an AI?
-  this.level.ennemyTable.push(this);
   //EventEmitter.call(this); //EventEmitter tutorial suggest to include this. I'm not sure why.
 }
 
@@ -50,21 +52,55 @@ Robot.prototype.nextTile=function() {
 
 Robot.prototype.reposition=function(tile) {
   this.currentTile=tile;
-	this.x=tile.i*level.tileSize+level.tileSize/2 ;
-	this.y=tile.j*level.tileSize+level.tileSize/2 ;
-	this.direction==0;
-	this.distanceToNextTile=level.tileSize;
+	this.x=tile.i*this.level.tileSize+this.level.tileSize/2 ;
+	this.y=tile.j*this.level.tileSize+this.level.tileSize/2 ;
+	this.distanceToNextTile=this.level.tileSize;
+  this.direction=nextDirection(false,0,tile);
 }
 
 Robot.prototype.startAJump=function(tile) {
   this.jumping=true;
-  console.log('jumping');
+  //console.log('jumping');
+}
+
+Robot.prototype.distanceTo=function(anotherRobot) {
+  //returns the square of the distance between two robots
+  return (this.x-anotherRobot.x)*(this.x-anotherRobot.x)+(this.y-anotherRobot.y)*(this.y-anotherRobot.y);
+}
+
+Robot.prototype.checkInterception=function() {
+  //checks wether this robot is currently intersecting with an ennemy
+  //Could optimize by using nearbyEnnemies
+  /*
+  var l=this.currentTile.nearbyEnnemies.length;
+  var c;
+  for (var i=0;i<l;i++) {
+    c=this.currentTile.nearbyEnnemies[i];
+    if (this.distanceTo(c)<this.level.robotRadius*this.level.robotRadius) return true;
+  }
+  var n=this.nextTile();
+  l=n.nearbyEnnemies.length;
+  for (var i=0;i<l;i++) {
+    c=n.nearbyEnnemies[i];
+    if (this.distanceTo(c)<this.level.robotRadius*this.level.robotRadius) return true;
+  }
+  return false
+  */
+  var e=this.level.ennemyTable;
+  var l=e.length;
+  for (var i=0;i<l;i++) {
+    if (this.distanceTo(e[i])<4*this.level.robotRadius*this.level.robotRadius) return true;
+  }
+
+
 }
 
 
-Robot.prototype.lost=function() {
-  this.emit('dead'); //warn whoever is listening (at least the level that created the player) that the player just died.
+Robot.prototype.hitEnnemy=function() {
+  //this.emit('dead'); //warn whoever is listening (at least the level that created the player) that the player just died.
+  this.reposition(this.level.tileTable[0][0]);
 }
+
 
 
 var nextDirection=function(jumping,currentDirection,tile) {
@@ -155,6 +191,11 @@ var nextDirection=function(jumping,currentDirection,tile) {
 
 Robot.prototype.updatePosition=function(timeGap) {
   //called at every loop. timeGap is the time since the Robot was last updated.
+    if (!this.isEnnemy && this.checkInterception()) {
+      //just touched an ennemy
+      this.hitEnnemy();
+    }
+
     if (this.jumping) {
       if (this.jumpingUp) {
         if (this.radius<this.level.maxJumpingRadius) this.radius=this.radius+(timeGap)*this.speedRadiusIncrease;
@@ -184,8 +225,17 @@ Robot.prototype.updatePosition=function(timeGap) {
     else {
       //going by an intersection
       var next=this.nextTile();
+
+      if (this.isEnnemy) {
+        next.nearbyEnnemies.push(this);
+        var index = this.currentTile.nearbyEnnemies.indexOf(this);
+        if (index > -1) {
+          this.currentTile.nearbyEnnemies.splice(index,1);
+        }
+      }
+
       var newDirection=nextDirection(this.jumping,this.direction,next);
-      console.log(newDirection);
+      //console.log(newDirection);
       this.currentTile=next; //move to a new tile
       this.direction = newDirection;
       var movementLeft=movement-this.distanceToNextTile;
@@ -194,5 +244,8 @@ Robot.prototype.updatePosition=function(timeGap) {
       else if (this.direction==1) this.y=this.currentTile.y-movementLeft;
       else if (this.direction==2) this.x=this.currentTile.x-movementLeft;
       else if (this.direction==3) this.y=this.currentTile.y+movementLeft;
+
+
+
     }
   }

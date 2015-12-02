@@ -13,8 +13,9 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
   this.ennemyTable=new Array(); //listing the ennemies currently navigating on the level
   this.robotRadius=robotRadius;
   this.ennemySpeed=0.02*this.tileSize/30;
-  this.playerSpeed=0.07*this.tileSize/30;
+  this.playerSpeed=0.06*this.tileSize/30;
   //this.playerSpeed=0.01*this.tileSize/30;
+  this.readyToJump=true; //to prevent a keydown from continually making a player jump
 
   this.robotRadius=tileSize/2;
   this.ennemyColor="#7f8c8d";
@@ -33,10 +34,14 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
 }
 
 Level.prototype.startTouch=function() {
-  this.playerTable[0].startAJump();
+  if (this.readyToJump) {
+    this.playerTable[0].startAJump();
+    this.readyToJump=false;
+  }
+
 }
 Level.prototype.endTouch=function() {
-  //do nothing for now.
+  this.readyToJump=true;
 }
 
 Level.prototype.addANewPlayer=function() {
@@ -108,6 +113,7 @@ Level.prototype.createPath=function(startTile,lengthProba,switchbacksProba,ennem
 	if (Math.random()<ennemyProba && ennemyLeft>0 && currentLength>2) {
     //add an ennemy on this tile
 		var ennemy=new Robot(startTile,this,this.ennemySpeed,true,this.ennemyColor);
+    this.ennemyTable.push(ennemy);
 		ennemyLeft--;
 	}
 	var X=currentX; //current direction of the corridor being built
@@ -244,7 +250,7 @@ Level.prototype.render=function() {
   		}
   	}
 
-  	var l=ennemyTable.length;
+  	var l=this.ennemyTable.length;
   	for (var i=0;i<l;i++) {
   		this.ennemyTable[i].draw();
   	}
@@ -272,7 +278,7 @@ Level.prototype.update=function() {
   if (this.currentlyPlaying) {
     var l=this.ennemyTable.length;
     for (var i=0;i<l;i++) {
-      //ennemyTable[i].updatePosition(timeGap);
+      this.ennemyTable[i].updatePosition(timeGap);
     }
     l=this.playerTable.length;
     for (var i=0;i<l;i++) {

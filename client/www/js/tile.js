@@ -18,6 +18,7 @@ function Tile(i,j,k,type,level) {
 	this.rightWall=1;
 	this.leftWall=1;
 	this.downWall=1;
+	this.nearbyEnnemies=new Array(); //used to optimize intersection. Each tile remembers the ennemies that are nearby
 }
 
 Tile.prototype.newType=function(type) {

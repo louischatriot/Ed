@@ -35,7 +35,6 @@ var startTouch=function(e) {
 	theLevel.startTouch();
 }
 var endTouch=function(e) {
-	//not being called right now.
 	e.preventDefault();
 	theLevel.endTouch();
 }
@@ -45,8 +44,13 @@ var endTouch=function(e) {
 //addEventListener("keyUp", endTouch,true);
 
 document.onkeydown = startTouch;
+document.onkeyup = endTouch;
+
 document.onmousedown = startTouch;
+document.onmouseup = endTouch;
+
 document.ontouchstart = startTouch;
+document.ontouchend = endTouch;
 
 
 
