@@ -1,251 +1,175 @@
+function Robot(currentTile, level, speed, isEnnemy) {
+  this.level = level; // The level the Robot is currently playing in
+  this.currentTile = currentTile;
+  this.distanceToNextTile = level.tileSize; // The distance between the Robot and the next Tile. Decreases with time.
+  this.x = currentTile.x;
+  this.y = currentTile.y;
+  this.direction = Robot.directions.RIGHT;
+
+  this.radius = level.robotRadius;
+
+	this.jumping = false;
+  this.jumpingUp = true; // Each jump has two sequences. One up, one down.
+
+  this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
+
+	this.lastTime = Date.now();
+	this.jumpingUp = true; // For the jumping sequence
+	this.speed = speed; // Different robots may have different speeds
+
+  this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed / level.tileSize; // Speed at which the robot increases during a jump. Just an animation parameter
+
+	this.color = level.robotColor;
+  if (isEnnemy) { this.color = level.ennemyColor; }
+	this.isEnnemy = isEnnemy;
+
+  this.AIControlled = false;
+}
+
+Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+
+function getOppositeDirection (direction) {
+  if (direction === Robot.directions.UP) { return Robot.directions.DOWN; }
+  if (direction === Robot.directions.DOWN) { return Robot.directions.UP; }
+  if (direction === Robot.directions.LEFT) { return Robot.directions.RIGHT; }
+  if (direction === Robot.directions.RIGHT) { return Robot.directions.LEFT; }
+}
 
 
-function Robot(currentTile,level,speed,isEnnemy) {
-  this.level=level; //the level the Robot is currently playing in
-  this.currentTile=currentTile;
-  this.distanceToNextTile=level.tileSize; //The distance between the Robot and the next Tile. Decreases with time.
-  this.x=currentTile.x;
-  this.y=currentTile.y;
-  this.direction=nextDirection(false,0,currentTile); //0=right, 1=up, 2=left, 3=down
+Robot.prototype.draw = function() {
+  cxt.beginPath();
+  cxt.arc(this.x - this.level.cameraX, this.y - this.level.cameraY, this.radius, 0, 2 * Math.PI);
+  cxt.fillStyle = this.color;
+  cxt.closePath();
+  cxt.fill();
+}
 
-  this.radius=level.robotRadius;
 
-	this.jumping=false;
-  this.jumpingUp=true; //each jump has two sequences. One up, one down.
+Robot.prototype.nextTile = function() {
+  var i = this.currentTile.i;
+  var j = this.currentTile.j;
+  if (this.direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
+  if (this.direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
+  if (this.direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
+  if (this.direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
 
-	this.lastTime=Date.now();
-	this.jumpingUp=true; //For the jumping sequence
-	this.speed=speed; //Different robots may have different speeds
+  // No tile found, return null
+  return null;
+}
 
-  this.speedRadiusIncrease=(this.level.maxJumpingRadius-this.radius)*2*this.speed/level.tileSize; //Speed at which the robot increases during a jump. Just an animation parameter
 
-	this.color=level.robotColor;
-  if (isEnnemy) {
-    this.color=level.ennemyColor;
+Robot.prototype.reposition = function(tile) {
+  this.currentTile = tile;
+	this.x = tile.i * this.level.tileSize + this.level.tileSize / 2 ;
+	this.y = tile.j * this.level.tileSize + this.level.tileSize / 2 ;
+	this.distanceToNextTile = this.level.tileSize;
+  this.jumping = false;
+  this.direction = Robot.directions.RIGHT;
+  this.direction = this.nextDirection();
+}
+
+
+Robot.prototype.startAJump = function(tile) {
+  this.jumping = true;
+}
+
+
+Robot.prototype.distanceTo = function(anotherRobot) {
+  return (this.x - anotherRobot.x) * (this.x - anotherRobot.x) + (this.y - anotherRobot.y) * (this.y - anotherRobot.y);
+}
+
+
+Robot.prototype.checkInterception = function() {
+  var e = this.level.ennemyTable;
+  for (var i = 0; i < this.level.ennemyTable.length; i += 1) {
+    if (this.distanceTo(this.level.ennemyTable[i]) < 4 * this.level.robotRadius * this.level.robotRadius) { return true; }
   }
-	this.isEnnemy=isEnnemy; //Is it a player or an ennemy?
-
-  this.AIControlled=false; //controlled by an AI?
-  //EventEmitter.call(this); //EventEmitter tutorial suggest to include this. I'm not sure why.
-}
-
-//Robot.prototype = new EventEmitter; //inherit from eventemitter class
-
-Robot.prototype.draw=function() {
-  //draw the given robot on the canvas
-		cxt.beginPath();
-		cxt.arc(this.x-this.level.cameraX,this.y-this.level.cameraY,this.radius,0,2*Math.PI);
-		cxt.fillStyle = this.color;
-		cxt.closePath();
-		cxt.fill();
-}
-
-Robot.prototype.nextTile=function() {
-  var i=this.currentTile.i;
-  var j=this.currentTile.j;
-  if (this.direction==0 && i<this.level.tileTableWidth-1) return this.level.tileTable[i+1][j];
-  else if (this.direction==2 && i>0) return this.level.tileTable[i-1][j];
-  else if (this.direction==1 && j>0) return this.level.tileTable[i][j-1];
-  else if (this.direction==3 && j<this.level.tileTableHeight-1) return this.level.tileTable[i][j+1];
 }
 
 
-Robot.prototype.reposition=function(tile) {
-  this.currentTile=tile;
-	this.x=tile.i*this.level.tileSize+this.level.tileSize/2 ;
-	this.y=tile.j*this.level.tileSize+this.level.tileSize/2 ;
-	this.distanceToNextTile=this.level.tileSize;
-  this.direction=nextDirection(false,0,tile);
-}
-
-Robot.prototype.startAJump=function(tile) {
-  this.jumping=true;
-  //console.log('jumping');
-}
-
-Robot.prototype.distanceTo=function(anotherRobot) {
-  //returns the square of the distance between two robots
-  return (this.x-anotherRobot.x)*(this.x-anotherRobot.x)+(this.y-anotherRobot.y)*(this.y-anotherRobot.y);
-}
-
-Robot.prototype.checkInterception=function() {
-  //checks wether this robot is currently intersecting with an ennemy
-  //Could optimize by using nearbyEnnemies
-  /*
-  var l=this.currentTile.nearbyEnnemies.length;
-  var c;
-  for (var i=0;i<l;i++) {
-    c=this.currentTile.nearbyEnnemies[i];
-    if (this.distanceTo(c)<this.level.robotRadius*this.level.robotRadius) return true;
-  }
-  var n=this.nextTile();
-  l=n.nearbyEnnemies.length;
-  for (var i=0;i<l;i++) {
-    c=n.nearbyEnnemies[i];
-    if (this.distanceTo(c)<this.level.robotRadius*this.level.robotRadius) return true;
-  }
-  return false
-  */
-  var e=this.level.ennemyTable;
-  var l=e.length;
-  for (var i=0;i<l;i++) {
-    if (this.distanceTo(e[i])<4*this.level.robotRadius*this.level.robotRadius) return true;
-  }
-
-
-}
-
-
-Robot.prototype.hitEnnemy=function() {
-  //this.emit('dead'); //warn whoever is listening (at least the level that created the player) that the player just died.
+Robot.prototype.hitEnnemy = function() {
   this.reposition(this.level.tileTable[0][0]);
 }
 
 
+/**
+ * Get the next direction the robot can go to. Try first to keep the same direction (if no wall ahead or jumping)
+ * Then try clockwise starting from the right of the current direction while avoiding to go in the opposite direction
+ * If forced, go back the opposite direction
+ */
+Robot.prototype.nextDirection = function() {
+  var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
+    , tileWalls = {};
+  // TODO: this is of course not satisfying, we should use the same structure for indexing tile walls
+  tileWalls[Robot.directions.UP] = this.currentTile.upWall;
+  tileWalls[Robot.directions.RIGHT] = this.currentTile.rightWall;
+  tileWalls[Robot.directions.DOWN] = this.currentTile.downWall;
+  tileWalls[Robot.directions.LEFT] = this.currentTile.leftWall;
 
-var nextDirection=function(jumping,currentDirection,tile) {
-  //Returns the next direction for a given intersection
-  if (currentDirection == 0) {
-      //going to the right
-      if (jumping && tile.rightWall != 2) {
-          return 0;
-      }
-      else {
-          if (tile.downWall == 0) {
-              return 3;
-          }
-          else if (tile.rightWall == 0) {
-              return 0;
-          }
-          else if (tile.upWall == 0) {
-              return 1;
-          }
-          else {
-              return 2;
-          }
-      }
+  if (this.jumping && tileWalls[this.direction] !== 2) { return this.direction; }
+
+  for (var i = dirSequence.indexOf(this.direction) + 1; i < dirSequence.length; i += 1) {
+    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i] }
   }
 
-  else if (currentDirection == 1) {
-      //going up
-      if (jumping && tile.upWall != 2) {
-          return 1;
-      }
-      else {
-          if (tile.rightWall == 0) {
-              return 0;
-          }
-          else if (tile.upWall == 0) {
-              return 1;
-          }
-          else if (tile.leftWall == 0) {
-              return 2;
-          }
-          else {
-              return 3;
-          }
-      }
-  }
-  else if (currentDirection == 2) {
-      //going left
-      if (jumping && tile.leftWall != 2) {
-          return 2;
-      }
-      else {
-          if (tile.upWall == 0) {
-              return 1;
-          }
-          else if (tile.leftWall == 0) {
-              return 2;
-          }
-          else if (tile.downWall == 0) {
-              return 3;
-          }
-          else {
-              return 0;
-          }
-      }
-  }
-  else if (currentDirection == 3) {
-      //going down
-      if (jumping && tile.downWall != 2) {
-          return 3;
-      }
-      else {
-          if (tile.leftWall == 0) {
-              return 2;
-          }
-          else if (tile.downWall == 0) {
-              return 3;
-          }
-          else if (tile.rightWall == 0) {
-              return 0;
-          }
-          else {
-              return 1;
-          }
-      }
-  }
-  return currentDirection;
+  return getOppositeDirection(this.direction);
 }
 
-Robot.prototype.updatePosition=function(timeGap) {
-  //called at every loop. timeGap is the time since the Robot was last updated.
-    if (!this.isEnnemy && this.checkInterception()) {
-      //just touched an ennemy
-      this.hitEnnemy();
-    }
 
-    if (this.jumping) {
-      if (this.jumpingUp) {
-        if (this.radius<this.level.maxJumpingRadius) this.radius=this.radius+(timeGap)*this.speedRadiusIncrease;
-        else this.jumpingUp=false;
+/**
+ * Update position and animate robot (name is probably not well chosen ...)
+ * Called at every loop
+ * @param {Number} timeGap Number of milliseconds elpased since robot was last updated
+ */
+Robot.prototype.updatePosition = function(timeGap) {
+  if (!this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
+
+  // Animate jump
+  if (this.jumping) {
+    if (this.jumpingUp) {
+      if (this.radius < this.level.maxJumpingRadius) {
+        this.radius += timeGap * this.speedRadiusIncrease;
+      } else {
+        this.jumpingUp = false;
       }
-      if (!this.jumpingUp){
-        if (this.radius>this.level.robotRadius) this.radius=this.radius-(timeGap)*this.speedRadiusIncrease;
-        else {
-          this.radius=this.level.robotRadius;
-          this.jumping=false;
-          this.jumpingUp=true;
-        }
+    } else {
+      if (this.radius > this.level.robotRadius) {
+        this.radius = this.radius - timeGap * this.speedRadiusIncrease;
+      } else {
+        this.radius = this.level.robotRadius;
+        this.jumping = false;
+        this.jumpingUp = true;
       }
-    }
-    var s=this.currentTile;
-
-    var movement=(timeGap)*this.speed;
-
-    if (movement<this.distanceToNextTile) {
-      //keep going in the same direction
-      this.distanceToNextTile-=movement;
-      if (this.direction==0) this.x+=movement;
-      else if (this.direction==1) this.y-=movement;
-      else if (this.direction==2) this.x-=movement;
-      else if (this.direction==3) this.y+=movement;
-    }
-    else {
-      //going by an intersection
-      var next=this.nextTile();
-
-      if (this.isEnnemy) {
-        next.nearbyEnnemies.push(this);
-        var index = this.currentTile.nearbyEnnemies.indexOf(this);
-        if (index > -1) {
-          this.currentTile.nearbyEnnemies.splice(index,1);
-        }
-      }
-
-      var newDirection=nextDirection(this.jumping,this.direction,next);
-      //console.log(newDirection);
-      this.currentTile=next; //move to a new tile
-      this.direction = newDirection;
-      var movementLeft=movement-this.distanceToNextTile;
-      this.distanceToNextTile=this.level.tileSize-movementLeft;
-      if (this.direction==0) this.x=this.currentTile.x+movementLeft;
-      else if (this.direction==1) this.y=this.currentTile.y-movementLeft;
-      else if (this.direction==2) this.x=this.currentTile.x-movementLeft;
-      else if (this.direction==3) this.y=this.currentTile.y+movementLeft;
-
-
-
     }
   }
+
+  var movement = timeGap * this.speed;
+  if (movement < this.distanceToNextTile) {
+    // Keep going in the same direction
+    this.distanceToNextTile -= movement;
+    if (this.direction === Robot.directions.RIGHT) this.x += movement;
+    if (this.direction === Robot.directions.UP) this.y -= movement;
+    if (this.direction === Robot.directions.LEFT) this.x -= movement;
+    if (this.direction === Robot.directions.DOWN) this.y += movement;
+  } else {
+    // Going by an intersection
+    var next = this.nextTile();
+
+    if (this.isEnnemy) {
+      next.nearbyEnnemies.push(this);
+      var index  =  this.currentTile.nearbyEnnemies.indexOf(this);
+      if (index > -1) {
+        this.currentTile.nearbyEnnemies.splice(index,1);
+      }
+    }
+
+    this.currentTile = next;
+    this.direction  =  this.nextDirection();
+    var movementLeft = movement - this.distanceToNextTile;
+    this.distanceToNextTile = this.level.tileSize - movementLeft;
+    if (this.direction === Robot.directions.RIGHT) this.x = this.currentTile.x + movementLeft;
+    if (this.direction === Robot.directions.UP) this.y = this.currentTile.y - movementLeft;
+    if (this.direction === Robot.directions.LEFT) this.x = this.currentTile.x - movementLeft;
+    if (this.direction === Robot.directions.DOWN) this.y = this.currentTile.y + movementLeft;
+  }
+}
