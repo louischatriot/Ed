@@ -14,7 +14,6 @@ function Robot(currentTile, level, speed, isEnnemy) {
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 
 	this.lastTime = Date.now();
-	this.jumpingUp = true; // For the jumping sequence
 	this.speed = speed; // Different robots may have different speeds
 
   this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed / level.tileSize; // Speed at which the robot increases during a jump. Just an animation parameter
@@ -106,10 +105,10 @@ Robot.prototype.nextDirection = function() {
   tileWalls[Robot.directions.DOWN] = this.currentTile.downWall;
   tileWalls[Robot.directions.LEFT] = this.currentTile.leftWall;
 
-  if (this.jumping && tileWalls[this.direction] !== 2) { return this.direction; }
+  if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARDWALL) { return this.direction; }
 
-  for (var i = dirSequence.indexOf(this.direction) + 1; i < dirSequence.length; i += 1) {
-    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i] }
+  for (var i = dirSequence.indexOf(this.direction); i < dirSequence.length; i += 1) {
+    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i]; }
   }
 
   return getOppositeDirection(this.direction);
@@ -119,7 +118,7 @@ Robot.prototype.nextDirection = function() {
 /**
  * Update position and animate robot (name is probably not well chosen ...)
  * Called at every loop
- * @param {Number} timeGap Number of milliseconds elpased since robot was last updated
+ * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated
  */
 Robot.prototype.updatePosition = function(timeGap) {
   if (!this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
