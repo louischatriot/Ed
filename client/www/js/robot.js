@@ -13,7 +13,6 @@ function Robot(currentTile, level, speed, isEnnemy) {
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 
-	this.lastTime = Date.now();
 	this.speed = speed; // Different robots may have different speeds
 
   this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed / level.tileSize; // Speed at which the robot increases during a jump. Just an animation parameter
@@ -22,7 +21,20 @@ function Robot(currentTile, level, speed, isEnnemy) {
   if (isEnnemy) { this.color = level.ennemyColor; }
 	this.isEnnemy = isEnnemy;
 
-  this.AIControlled = false;
+  this.AIControlled = false; // Keep false for human players
+  this.canAIJumpTwiceInARow = false; // It's a bit too easy for the AI to keep continuously jumping
+  this.AIDepth = 5; // the higher the depth, the better the AI, the slower the calculation
+}
+
+Robot.prototype.clone = function(anotherRobot) {
+  this.level = anotherRobot.level;
+  this.currentTile = anotherRobot.currentTile;
+  this.distanceToNextTile = anotherRobot.distanceToNextTile;
+  this.x = anotherRobot.x;
+  this.y = anotherRobot.y;
+  this.direction = anotherRobot.direction;
+  this.isEnnemy = anotherRobot.isEnnemy;
+  this.AIControlled = anotherRobot.AIControlled;
 }
 
 Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
@@ -34,6 +46,56 @@ function getOppositeDirection (direction) {
   if (direction === Robot.directions.RIGHT) { return Robot.directions.LEFT; }
 }
 
+function faceWallType(tile,direction,type) {
+  if (direction === Robot.directions.RIGHT && tile.rightWall === type) { return true; }
+  if (direction === Robot.directions.UP && tile.upWall === type) { return true; }
+  if (direction === Robot.directions.LEFT && tile.leftWall === type) { return true; }
+  if (direction === Robot.directions.DOWN && tile.downWall === type) { return true; }
+  return false;
+}
+
+
+function futureCollision(tile,distance) {
+  var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
+  var l = futureEnnemyTable.length;
+  var safeDistance = tile.level.robotRadius*4
+  for (var i = 0; i < l; i++) {
+      var e = futureEnnemyTable[i];
+      if (Math.abs(tile.x-e.x) < safeDistance && Math.abs(tile.y-e.y) < safeDistance) {
+        return true;
+      }
+  }
+}
+
+
+/**
+ * Returns wether the robot should be jumping or not, and the AI score.
+ * Called either at every loop, or whenever the robot is faced with a decision
+ */
+function AINext(tile,direction,depth,distance,justJumped) {
+  if (tile.i === tile.level.tileTableWidth-1 && tile.j === tile.level.tileTableHeight-1) {
+    return (false, 10000/distance); // reward the victory with the minimal distance spent to get there.
+  }
+  if (depth === 0) { return (false,(tile.i+tile.j)/distance } // reward going as far as possible from the origin in the minimum distance
+  if (futureCollision(tile,distance)) { return (false, 0);} // Potential for ennemy collision in the future. This was a bad path
+  var couldJump = true;
+  if ((!this.canAIJumpTwiceInARow && justJumped) || !faceWallType(tile, direction, Tile.wallType.SOFT)) {
+    var couldJump = false;
+  }
+  if (!couldJump) {
+    direction = nextDirection(tile,direction,false);
+    tile = nextTile(tile,direction);
+    return (false, AINext(tile, direction, depth - 1, distance + 1, false));
+  }
+  else {
+      var (a,b) = AINext(nextTile(tile,direction), direction, depth - 1, distance + 1, true); // result with a jump
+      direction = nextDirection(tile,direction,false);
+      tile = nextTile(tile,direction);
+      var (c,d) = AINext(tile, direction, depth - 1, distance + 1, false); // result without a jump
+      if (b > d) { return (true, b); } // choose the jump
+      else { return (false, d); } //don't jump
+}
+
 
 Robot.prototype.draw = function() {
   cxt.beginPath();
@@ -41,6 +103,19 @@ Robot.prototype.draw = function() {
   cxt.fillStyle = this.color;
   cxt.closePath();
   cxt.fill();
+}
+
+
+function nextTile(tile,direction) {
+  var i = tile.i;
+  var j = tile.j;
+  if (direction == Robot.directions.RIGHT && i < tile.level.tileTableWidth - 1) { return tile.level.tileTable[i + 1][j]; }
+  if (direction == Robot.directions.LEFT && i > 0) { return tile.level.tileTable[i - 1][j]; }
+  if (direction == Robot.directions.UP && j > 0) { return tile.level.tileTable[i][j - 1]; }
+  if (direction == Robot.directions.DOWN && j < tile.level.tileTableHeight - 1) { return tile.level.tileTable[i][j + 1]; }
+
+  // No tile found, return null
+  return null;
 }
 
 
@@ -88,6 +163,24 @@ Robot.prototype.checkInterception = function() {
 
 Robot.prototype.hitEnnemy = function() {
   this.reposition(this.level.tileTable[0][0]);
+}
+
+// same function as the prototype nextDirection, except it doesn't have to be called on an object, which is convenient not to create to many object in AI depth
+var nextDirection = function(tile,direction,jump) {
+  var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
+    , tileWalls = {};
+  tileWalls[Robot.directions.UP] = tile.upWall;
+  tileWalls[Robot.directions.RIGHT] = tile.rightWall;
+  tileWalls[Robot.directions.DOWN] = tile.downWall;
+  tileWalls[Robot.directions.LEFT] = tile.leftWall;
+
+  if (jump && tileWalls[direction] !== Tile.wallType.HARDWALL) { return direction; }
+
+  for (var i = dirSequence.indexOf(direction); i < dirSequence.length; i += 1) {
+    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(direction) !== dirSequence[i]) { return dirSequence[i]; }
+  }
+
+  return getOppositeDirection(direction);
 }
 
 
@@ -170,5 +263,16 @@ Robot.prototype.updatePosition = function(timeGap) {
     if (this.direction === Robot.directions.UP) this.y = this.currentTile.y - movementLeft;
     if (this.direction === Robot.directions.LEFT) this.x = this.currentTile.x - movementLeft;
     if (this.direction === Robot.directions.DOWN) this.y = this.currentTile.y + movementLeft;
+
+    if (this.AIControlled) {
+      // You've just passed by an intersection. Time to make a decision about the next jump
+      // first we create the table of future ennemy positions
+      this.level.ennemyClones = new Array() // eventually it would be better to keep the table stored from one step to the next
+      this.level.updateFutureEnnemyPositions(this.level.tileSize/this.speed , this.AIDepth);
+      function AINext(tile,direction,depth,distance,justJumped) {
+      var (a,c) = AINext(nextTile(this.tile,this.direction),this.direction,this.AIDepth,0,this.jumping);
+      if (a) { this.startAJump(); }
+    }
+
   }
 }

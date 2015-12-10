@@ -28,6 +28,9 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
   this.colorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"]; //blue tones
   this.colorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"]; //red tones
   this.colorTable = ["#ecf0f1","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#95a5a6","#2c3e50"]; //mixed tones
+
+  this.futureEnnemyPositions = new Array();
+  this.ennemyClones = new Array();
 }
 
 
@@ -84,6 +87,31 @@ Level.prototype.createNewLevel = function() {
 			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*5)+1, 0, ennemyLeft);
 		}
 	}
+}
+
+
+Level.prototype.cloneEnnemies = function() {
+  this.ennemyClones = new Array();
+  for (var i = 0; i < this.ennemyTable.length; i++) {
+    var newEnnemy = new Robot(this.ennemyTable[i].startTile, this.ennemyTable[i].speed, true);
+    newEnnemy.clone(this.ennemyTable[i]);
+    this.ennemyClones.append(newEnnemy);
+  }
+}
+
+
+//Push the future ennemy position by depth steps
+Level.prototype.updateFutureEnnemyPositions = function(stepTimeGap,depth) {
+  if (this.ennemyClones.length === 0) { this.cloneEnnemies(); }
+  for (var j = 0; j < depth; j++) {
+    var newStep = new Array();
+    //first move the cloned ennemies by one step;
+    for (var i = 0; i < this.ennemyClones.length; i++) {
+      this.ennemyClones[i].updatePosition(stepTimeGap);
+      newStep.append({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y });
+    }
+    this.futureEnnemyPositions.append(newStep);
+  }
 }
 
 
