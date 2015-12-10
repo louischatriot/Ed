@@ -56,14 +56,32 @@ function faceWallType(tile,direction,type) {
 }
 
 
-function futureCollision(tile,distance) {
+//checks wether the future ghost will touch future ennemies
+function futureCollision(tile, direction, distance) {
   var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
   var l = futureEnnemyTable.length;
   var safeDistance = tile.level.robotRadius * 4;
   for (var i = 0; i < l; i++) {
       var e = futureEnnemyTable[i];
       if (e.tile.type === tile.type && Math.abs(tile.x - e.x) < safeDistance && Math.abs(tile.y - e.y) < safeDistance) {
-        return true; //it will collide
+        //condition for a collision to happen. Now we check in detail. First we create objects based there. Then we make them move.
+        var ghostPlayer = new Robot(tile, tile.level, tile.level.playerSpeed, false);
+        ghostPlayer.direction = nextDirection(tile,direction,false);;
+
+        var ghostEnnemy = new Robot(e.tile, tile.level, tile.level.ennemySpeed, true);
+        ghostEnnemy.x = e.x;
+        ghostEnnemy.y = e.y;
+        ghostEnnemy.direction = e.direction;
+        ghostEnnemy.distanceToNextTile = e.distanceToNextTile;
+        var timeStep = 30;
+        var totalTime = tile.level.tileSize / tile.level.playerSpeed;
+        var elapsedTime = 0;
+        while (elapsedTime < totalTime) {
+          elapsedTime += timeStep;
+          ghostPlayer.updatePosition(timeStep);
+          ghostEnnemy.updatePosition(timeStep);
+          if (ghostPlayer.collisionWith(ghostEnnemy)) { return true; }
+        }
       }
   }
   return false;
@@ -79,7 +97,7 @@ function AINext(tile,direction,depth,distance,justJumped) {
     return { jump: false, score: 10000/distance }; // reward the victory with the minimal distance spent to get there.
   }
   if (depth === 0) { return { jump: false, score: (tile.i+tile.j)/distance} } // reward going as far as possible from the origin in the minimum distance
-  if (futureCollision(tile,distance)) { return { jump: false, score: 0 }; } // Potential for ennemy collision in the future. This was a bad path
+  if (futureCollision(tile, direction, distance)) { return { jump: false, score: 0 }; } // Potential for ennemy collision in the future. This was a bad path
 
   if ((!this.canAIJumpTwiceInARow && justJumped) || !faceWallType(tile, direction, Tile.wallType.SOFT)) {
     //no point in jumping. No decision to make
@@ -153,12 +171,22 @@ Robot.prototype.distanceTo = function(anotherRobot) {
   return (this.x - anotherRobot.x) * (this.x - anotherRobot.x) + (this.y - anotherRobot.y) * (this.y - anotherRobot.y);
 }
 
+// optimized collision function
+Robot.prototype.collisionWith = function(anotherRobot) {
+  var r = 2 * this.level.robotRadius;
+  if (Math.abs(anotherRobot.x - this.x) < r && Math.abs(anotherRobot.y - this.y) < r && this.distanceTo(anotherRobot) < r * r) {
+      return true;
+  }
+  return false;
+}
+
 
 Robot.prototype.checkInterception = function() {
   var e = this.level.ennemyTable;
   for (var i = 0; i < this.level.ennemyTable.length; i += 1) {
-    if (this.distanceTo(this.level.ennemyTable[i]) < 4 * this.level.robotRadius * this.level.robotRadius) { return true; }
+    if (this.collisionWith(this.level.ennemyTable[i])) { return true; }
   }
+  return false;
 }
 
 
@@ -166,7 +194,8 @@ Robot.prototype.hitEnnemy = function() {
   this.reposition(this.level.tileTable[0][0]);
 }
 
-// same function as the prototype nextDirection, except it doesn't have to be called on an object, which is convenient not to create to many object in AI depth
+
+// same function as the prototype nextDirection, except it doesn't have to be called on an object, which is convenient to avoid creating too many objects in AI depth
 function nextDirection(tile,direction,jump) {
   var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
     , tileWalls = {};

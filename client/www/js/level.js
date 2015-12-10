@@ -21,7 +21,7 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
   this.lastTime=Date.now(); //Used to measure the delay between rendering frames
   this.currentlyPlaying=true; // Use to pause the game
 
-  this.ennemyDifficulty=0.1; //Higher means more ennemies will appear. Harder. Standard=0.1
+  this.ennemyDifficulty=0.2; //Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow=2; //number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty=0.05; //Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty=0.4; //Higher means more tortuous corridors. Easier. standard=0.4
@@ -111,7 +111,8 @@ Level.prototype.updateFutureEnnemyPositions = function(stepTimeGap,depth) {
     // move the cloned ennemies by one step;
     for (var i = 0; i < this.ennemyClones.length; i++) {
       this.ennemyClones[i].updatePosition(stepTimeGap);
-      newStep.push({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y, tile: this.ennemyClones[i].tile, direction: this.ennemyClones[i].direction });
+      //TODO: we might as well make a full clone. Just saving a little bit of memory at this point
+      newStep.push({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y, tile: this.ennemyClones[i].tile, direction: this.ennemyClones[i].direction, distanceToNextTile: this.ennemyClones[i].distanceToNextTile });
     }
     this.futureEnnemyPositions.push(newStep);
   }
