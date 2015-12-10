@@ -22,9 +22,10 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.isEnnemy = isEnnemy;
 
   this.AIControlled = false; // Keep false for human players
-  this.canAIJumpTwiceInARow = false; // It's a bit too easy for the AI to keep continuously jumping
-  this.AIDepth = 20; // the higher the depth, the better the AI, the slower the calculation
+  this.canAIJumpTwiceInARow = false; // It's a bit too easy for the AI to keep continuously jumping. TODO: the parameter doesn't seem to change AI behavior
+  this.AIDepth = 20; // the higher the depth, the better the AI, the slower the calculation. TODO: the depth is the number of tiles visited. It should really be the depth of the recursion, but this produces bad results. I'm not sure why
 }
+
 
 Robot.prototype.cloneFrom = function(anotherRobot) {
   this.level = anotherRobot.level;
@@ -56,7 +57,8 @@ function faceWallType(tile,direction,type) {
 }
 
 
-//checks wether the future ghost will touch future ennemies
+// checks wether the future ghost will touch future ennemies
+// TODO: it seems that this function is not catching all collision. Sometimes the AI still inexplicably collides.
 function futureCollision(tile, direction, distance) {
   var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
   var l = futureEnnemyTable.length;
