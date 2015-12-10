@@ -20,6 +20,8 @@ var tileTableHeight = Math.floor(canvas.height / tileSize);
 var theLevel = new Level(tileSize,tileTableWidth,tileTableHeight);
 theLevel.createNewLevel();
 theLevel.addANewPlayer();
+theLevel.addANewPlayer();
+theLevel.playerTable[1].AIControlled = true;
 
 var startTouch = function(e) {
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
@@ -44,4 +46,3 @@ var main = function () {
 };
 
 setInterval(main, 20);
-

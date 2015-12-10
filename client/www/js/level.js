@@ -60,10 +60,10 @@ Level.prototype.reset = function() {
 		this.tileTable[i]=new Array();
 		for (var j = 0; j < this.tileTableHeight; j++) {
 			this.tileTable[i][j] = new Tile(i,j,0,this);
-			if (i === 0) { this.tileTable[i][j].leftWall = 2; }
-			if (i === this.tileTableWidth-1) { this.tileTable[i][j].rightWall = 2; }
-			if (j === 0) { this.tileTable[i][j].upWall = 2; }
-			if (j === this.tileTableHeight-1) { this.tileTable[i][j].downWall = 2; }
+			if (i === 0) { this.tileTable[i][j].leftWall = Tile.wallType.HARD; }
+			if (i === this.tileTableWidth-1) { this.tileTable[i][j].rightWall = Tile.wallType.HARD; }
+			if (j === 0) { this.tileTable[i][j].upWall = Tile.wallType.HARD; }
+			if (j === this.tileTableHeight-1) { this.tileTable[i][j].downWall = Tile.wallType.HARD; }
 		}
 	}
 	ennemyTable=new Array();
@@ -93,24 +93,27 @@ Level.prototype.createNewLevel = function() {
 Level.prototype.cloneEnnemies = function() {
   this.ennemyClones = new Array();
   for (var i = 0; i < this.ennemyTable.length; i++) {
-    var newEnnemy = new Robot(this.ennemyTable[i].startTile, this.ennemyTable[i].speed, true);
-    newEnnemy.clone(this.ennemyTable[i]);
-    this.ennemyClones.append(newEnnemy);
+    var newEnnemy = new Robot(this.ennemyTable[i].tile, this, this.ennemyTable[i].speed, true);
+    newEnnemy.cloneFrom(this.ennemyTable[i]);
+    this.ennemyClones.push(newEnnemy);
   }
 }
 
 
 //Push the future ennemy position by depth steps
 Level.prototype.updateFutureEnnemyPositions = function(stepTimeGap,depth) {
-  if (this.ennemyClones.length === 0) { this.cloneEnnemies(); }
+  if (this.ennemyClones.length === 0) {
+    this.cloneEnnemies();
+    this.futureEnnemyPositions = new Array();
+  }
   for (var j = 0; j < depth; j++) {
     var newStep = new Array();
-    //first move the cloned ennemies by one step;
+    // move the cloned ennemies by one step;
     for (var i = 0; i < this.ennemyClones.length; i++) {
       this.ennemyClones[i].updatePosition(stepTimeGap);
-      newStep.append({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y });
+      newStep.push({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y, tile: this.ennemyClones[i].tile, direction: this.ennemyClones[i].direction });
     }
-    this.futureEnnemyPositions.append(newStep);
+    this.futureEnnemyPositions.push(newStep);
   }
 }
 
