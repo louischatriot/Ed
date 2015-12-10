@@ -7,7 +7,7 @@ function Tile(i,j,k,level) {
 	this.y = level.tileSize * j + level.tileSize / 2;
 	this.type = 0; // 0 means is hasn't been filled by a corridor yet. All tiles in the same corridor have the same type
   this.toDraw = true;
-	this.color = level.colorTable[type];
+	this.color = level.colorTable[this.type];
 	this.upWall = 1;
 	this.rightWall = 1;
 	this.leftWall = 1;
@@ -16,7 +16,7 @@ function Tile(i,j,k,level) {
 }
 
 
-Tile.prototype.wallType = { NOWALL: 0, SOFT: 1, HARD: 2 }
+Tile.wallType = { NOWALL: 0, SOFT: 1, HARD: 2 }
 
 
 Tile.prototype.newType = function(type) {

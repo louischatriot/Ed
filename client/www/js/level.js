@@ -28,7 +28,6 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
   this.colorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"]; //blue tones
   this.colorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"]; //red tones
   this.colorTable = ["#ecf0f1","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#95a5a6","#2c3e50"]; //mixed tones
-
 }
 
 
@@ -90,6 +89,7 @@ Level.prototype.createNewLevel = function() {
 
 /**
  * Recursive function used to create all the corridors in a new level
+ * The code could probably be made shorter, but this works
  */
 Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,ennemyProba,currentX,currentY,currentType,currentLength,maxNumberEnnemy) {
 	if ( startTile.type !== 0) return; // Means you've ended on a tile that has already been filed up
@@ -113,7 +113,7 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 		//we don't stop right there
 		var switchback = false;
 		if (Math.random() < switchbacksProba) switchback=true;
-		if (X > 0 && (i >== this.tileTableWidth-1 || this.tileTable[i+1][j].type > 0 || switchback)) {
+		if (X > 0 && (i >= this.tileTableWidth-1 || this.tileTable[i+1][j].type > 0 || switchback)) {
 			//cannot move to the right as planned
 				if (Math.random() > 0.5 && j < this.tileTableHeight-1 && this.tileTable[i][j+1].type === 0) {
 					//move down
