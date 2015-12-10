@@ -225,9 +225,27 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 
 Level.prototype.render = function() {
   	cxt.clearRect( 0, 0 , canvas.width , canvas.height ); // not the most efficient way to go
-  	for (var i = 0; i < this.tileTableWidth; i++) {
-  		for (var j = 0; j < this.tileTableHeight; j++) { this.tileTable[i][j].draw(); }
-  	}
+
+    // Save background as an image to avoid redrawing it at every cycle - very CPU consuming
+    if (!this.$background) {
+      $('canvas').css('position', 'fixed');
+      $('canvas').css('top', '0px');
+      $('canvas').css('left', '0px');
+
+      for (var i = 0; i < this.tileTableWidth; i++) {
+        for (var j = 0; j < this.tileTableHeight; j++) { this.tileTable[i][j].draw(); }
+      }
+
+      this.$background = $('<img src="' + canvas.toDataURL("image/png") + '">');
+      this.$background.css('position', 'fixed');
+      this.$background.css('top', '0px');
+      this.$background.css('left', '0px');
+      this.$background.css('width', canvas.width + 'px');
+      this.$background.css('height', canvas.height + 'px');
+
+      $('body').prepend(this.$background);
+      cxt.clearRect( 0, 0 , canvas.width , canvas.height ); // not the most efficient way to go
+    }
 
   	var l = this.ennemyTable.length;
   	for (var i = 0; i < l; i++) { this.ennemyTable[i].draw(); }
@@ -237,7 +255,7 @@ Level.prototype.render = function() {
 }
 
 
-Level.prototype.update=function() {
+Level.prototype.update = function() {
   var newTime = Date.now();
   var timeGap = (newTime - this.lastTime);
   this.lastTime = newTime;
