@@ -58,7 +58,7 @@ function faceWallType(tile,direction,type) {
 
 
 // checks wether the future ghost will touch future ennemies
-// TODO: it seems that this function is not catching all collision. Sometimes the AI still inexplicably collides.
+// TODO: it seems that this function is not catching all collision. Sometimes the AI still inexplicably collides. est: 30min
 function futureCollision(tile, direction, distance) {
   var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
   var l = futureEnnemyTable.length;
@@ -93,6 +93,7 @@ function futureCollision(tile, direction, distance) {
 /**
  * Returns wether the robot should be jumping or not, and the AI score.
  * Called either at every loop, or whenever the robot is faced with a decision
+ * TODO AI never intentionally dies. Sometimes it can make things quicker in the beginning. Would need to keep calculating even after deaths. Est: 3h (need to redo everything)
  */
 function AINext(tile,direction,depth,distance,justJumped) {
   if (tile.i === tile.level.tileTableWidth-1 && tile.j === tile.level.tileTableHeight-1) {
@@ -297,10 +298,13 @@ Robot.prototype.updatePosition = function(timeGap) {
     if (this.direction === Robot.directions.DOWN) this.y = this.tile.y + movementLeft;
 
     if (this.AIControlled) {
-      // You've just passed by an intersection. Time to make a decision about the next jump
+      // You've just passed by an intersection. Times to make a decision about the next jump
+      if ((!this.canAIJumpTwiceInARow && this.jumping) || !faceWallType(nextTile(this.tile,this.direction), this.direction, Tile.wallType.SOFT)) {
+        return; // no need to calculate anything. Jumping is pointless
+      }
       // first we create the table of future ennemy positions
       this.level.ennemyClones = new Array(); // eventually it would be better to keep the table stored from one step to the next
-      this.level.updateFutureEnnemyPositions(this.level.tileSize/this.speed , this.AIDepth);
+      this.level.updateFutureEnnemyPositions(this.level.tileSize/this.speed , this.AIDepth); // TODO this shouldn't need to be recalculated every time. It's always the same table that just shifts by one every step. Est : 15min
       var next = AINext(nextTile(this.tile,this.direction),this.direction,this.AIDepth,0,this.jumping);
       if (next.jump) { this.startAJump(); }
     }

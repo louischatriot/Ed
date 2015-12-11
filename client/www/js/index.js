@@ -22,6 +22,9 @@ theLevel.createNewLevel();
 theLevel.addANewPlayer();
 theLevel.addANewPlayer();
 theLevel.playerTable[1].AIControlled = true;
+theLevel.addANewPlayer();
+theLevel.playerTable[2].AIControlled = true;
+theLevel.playerTable[2].AIDepth = 4;
 
 var startTouch = function(e) {
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
