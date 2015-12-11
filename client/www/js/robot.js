@@ -13,12 +13,22 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
-  this.AIControlled = false; // Keep false for human players
-  this.canAIJumpTwiceInARow = false; // It's a bit too easy for the AI to keep continuously jumping. TODO: the parameter doesn't seem to change AI behavior
-  this.AIDepth = 20; // the higher the depth, the better the AI, the slower the calculation. TODO: the depth is the number of tiles visited. It should really be the depth of the recursion, but this produces bad results. I'm not sure why
+  this.listeners = {};
 }
 
 Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+
+
+Robot.prototype.emit = function (evt, message) {
+  if (this.listeners[evt]) {
+    this.listeners[evt].forEach(function (fn) { fn(message); });
+  }
+};
+
+Robot.prototype.on = function(evt, listener) {
+  if (!this.listeners[evt]) { this.listeners[evt] = []; }
+  this.listeners[evt].push(listener);
+};
 
 
 Robot.prototype.cloneFrom = function(anotherRobot) {
@@ -41,89 +51,6 @@ function getOppositeDirection (direction) {
   if (direction === Robot.directions.RIGHT) { return Robot.directions.LEFT; }
 }
 
-
-function faceWallType(tile,direction,type) {
-  if (direction === Robot.directions.RIGHT && tile.rightWall === type) { return true; }
-  if (direction === Robot.directions.UP && tile.upWall === type) { return true; }
-  if (direction === Robot.directions.LEFT && tile.leftWall === type) { return true; }
-  if (direction === Robot.directions.DOWN && tile.downWall === type) { return true; }
-  return false;
-}
-
-
-// checks wether the future ghost will touch future ennemies
-// TODO: it seems that this function is not catching all collision. Sometimes the AI still inexplicably collides. est: 30min
-function futureCollision(tile, direction, distance) {
-  var futureEnnemyTable = this.level.futureEnnemyPositions[distance];
-  var l = futureEnnemyTable.length;
-  var safeDistance = 4 / 5;
-  for (var i = 0; i < l; i++) {
-      var e = futureEnnemyTable[i];
-      if (e.tile.type === tile.type && Math.abs(tile.x - e.x) < safeDistance && Math.abs(tile.y - e.y) < safeDistance) {
-        //condition for a collision to happen. Now we check in detail. First we create objects based there. Then we make them move.
-        var ghostPlayer = new Robot(tile, this.level, this.level.playerSpeed, false);
-        ghostPlayer.direction = nextDirection(tile,direction,false);;
-
-        var ghostEnnemy = new Robot(e.tile, this.level, this.level.ennemySpeed, true);
-        ghostEnnemy.x = e.x;
-        ghostEnnemy.y = e.y;
-        ghostEnnemy.direction = e.direction;
-        ghostEnnemy.distanceToNextTile = e.distanceToNextTile;
-        var timeStep = 30;
-        var totalTime = 1 / this.level.playerSpeed;
-        var elapsedTime = 0;
-        while (elapsedTime < totalTime) {
-          elapsedTime += timeStep;
-          ghostPlayer.updatePosition(timeStep);
-          ghostEnnemy.updatePosition(timeStep);
-          if (ghostPlayer.collisionWith(ghostEnnemy)) { return true; }
-        }
-      }
-  }
-  return false;
-}
-
-
-/**
- * Returns wether the robot should be jumping or not, and the AI score.
- * Called either at every loop, or whenever the robot is faced with a decision
- * TODO AI never intentionally dies. Sometimes it can make things quicker in the beginning. Would need to keep calculating even after deaths. Est: 3h (need to redo everything)
- */
-function AINext(tile,direction,depth,distance,justJumped) {
-  if (tile.i === this.level.tileTableWidth-1 && tile.j === this.level.tileTableHeight-1) {
-    return { jump: false, score: 10000/distance }; // reward the victory with the minimal distance spent to get there.
-  }
-  if (depth === 0) { return { jump: false, score: (tile.i+tile.j)/distance} } // reward going as far as possible from the origin in the minimum distance
-  if (futureCollision(tile, direction, distance)) { return { jump: false, score: 0 }; } // Potential for ennemy collision in the future. This was a bad path
-
-  if ((!this.canAIJumpTwiceInARow && justJumped) || !faceWallType(tile, direction, Tile.wallType.SOFT)) {
-    //no point in jumping. No decision to make
-    direction = nextDirection(tile,direction,false);
-    tile = nextTile(tile,direction);
-    return { jump: false, score: AINext(tile, direction, depth - 1 , distance + 1, false).score };
-  }
-  else {
-      var resultWithJump = AINext(nextTile(tile,direction), direction, depth - 1, distance + 1, true);
-      direction = nextDirection(tile,direction,false);
-      tile = nextTile(tile,direction);
-      var resultWithoutJump = AINext(tile, direction, depth - 1, distance + 1, false);
-      if (resultWithJump.score > resultWithoutJump.score) { return { jump: true, score: resultWithJump.score }; }
-      else { return { jump: false, score: resultWithoutJump.score }; } //don't jump
-  }
-}
-
-
-function nextTile(tile,direction) {
-  var i = tile.i;
-  var j = tile.j;
-  if (direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
-  if (direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
-  if (direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
-  if (direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
-
-  // No tile found, return null
-  return null;
-}
 
 
 Robot.prototype.nextTile = function() {
@@ -172,25 +99,6 @@ Robot.prototype.checkInterception = function() {
 
 Robot.prototype.hitEnnemy = function() {
   this.reposition(this.level.tileTable[0][0]);
-}
-
-
-// same function as the prototype nextDirection, except it doesn't have to be called on an object, which is convenient to avoid creating too many objects in AI depth
-function nextDirection(tile,direction,jump) {
-  var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
-    , tileWalls = {};
-  tileWalls[Robot.directions.UP] = tile.upWall;
-  tileWalls[Robot.directions.RIGHT] = tile.rightWall;
-  tileWalls[Robot.directions.DOWN] = tile.downWall;
-  tileWalls[Robot.directions.LEFT] = tile.leftWall;
-
-  if (jump && tileWalls[direction] !== Tile.wallType.HARDWALL) { return direction; }
-
-  for (var i = dirSequence.indexOf(direction); i < dirSequence.length; i += 1) {
-    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(direction) !== dirSequence[i]) { return dirSequence[i]; }
-  }
-
-  return getOppositeDirection(direction);
 }
 
 
@@ -255,16 +163,6 @@ Robot.prototype.updatePosition = function(timeGap) {
     if (this.direction === Robot.directions.LEFT) this.x = this.tile.x - movementLeft;
     if (this.direction === Robot.directions.DOWN) this.y = this.tile.y + movementLeft;
 
-    if (this.AIControlled) {
-      // You've just passed by an intersection. Times to make a decision about the next jump
-      if ((!this.canAIJumpTwiceInARow && this.jumping) || !faceWallType(nextTile(this.tile,this.direction), this.direction, Tile.wallType.SOFT)) {
-        return; // no need to calculate anything. Jumping is pointless
-      }
-      // first we create the table of future ennemy positions
-      this.level.ennemyClones = new Array(); // eventually it would be better to keep the table stored from one step to the next
-      this.level.updateFutureEnnemyPositions(1 / this.speed , this.AIDepth); // TODO this shouldn't need to be recalculated every time. It's always the same table that just shifts by one every step. Est : 15min
-      var next = AINext(nextTile(this.tile,this.direction),this.direction,this.AIDepth,0,this.jumping);
-      if (next.jump) { this.startAJump(); }
+    this.emit('justPassedIntersection'); //send event for AI.
     }
-  }
 }
