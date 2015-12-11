@@ -119,15 +119,6 @@ function AINext(tile,direction,depth,distance,justJumped) {
 }
 
 
-Robot.prototype.draw = function() {
-  cxt.beginPath();
-  cxt.arc(this.x - this.level.cameraX, this.y - this.level.cameraY, this.radius, 0, 2 * Math.PI);
-  cxt.fillStyle = this.color;
-  cxt.closePath();
-  cxt.fill();
-}
-
-
 function nextTile(tile,direction) {
   var i = tile.i;
   var j = tile.j;
