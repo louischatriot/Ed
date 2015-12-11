@@ -293,6 +293,9 @@ Level.prototype.render = function() {
 Level.prototype.update = function() {
   var newTime = Date.now();
   var timeGap = (newTime - this.lastTime);
+  if (timeGap > 100) {
+    this.physicStepsBetweenRenderings++; // if computer is lagging, we render less often
+  } else { this.physicsStepsBetweenRenderings = 1; }
   this.lastTime = newTime;
 
   if (this.currentlyPlaying) {
