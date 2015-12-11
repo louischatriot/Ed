@@ -54,23 +54,23 @@ function faceWallType(tile,direction,type) {
 // checks wether the future ghost will touch future ennemies
 // TODO: it seems that this function is not catching all collision. Sometimes the AI still inexplicably collides. est: 30min
 function futureCollision(tile, direction, distance) {
-  var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
+  var futureEnnemyTable = this.level.futureEnnemyPositions[distance];
   var l = futureEnnemyTable.length;
   var safeDistance = 4 / 5;
   for (var i = 0; i < l; i++) {
       var e = futureEnnemyTable[i];
       if (e.tile.type === tile.type && Math.abs(tile.x - e.x) < safeDistance && Math.abs(tile.y - e.y) < safeDistance) {
         //condition for a collision to happen. Now we check in detail. First we create objects based there. Then we make them move.
-        var ghostPlayer = new Robot(tile, tile.level, tile.level.playerSpeed, false);
+        var ghostPlayer = new Robot(tile, this.level, this.level.playerSpeed, false);
         ghostPlayer.direction = nextDirection(tile,direction,false);;
 
-        var ghostEnnemy = new Robot(e.tile, tile.level, tile.level.ennemySpeed, true);
+        var ghostEnnemy = new Robot(e.tile, this.level, this.level.ennemySpeed, true);
         ghostEnnemy.x = e.x;
         ghostEnnemy.y = e.y;
         ghostEnnemy.direction = e.direction;
         ghostEnnemy.distanceToNextTile = e.distanceToNextTile;
         var timeStep = 30;
-        var totalTime = 1 / tile.level.playerSpeed;
+        var totalTime = 1 / this.level.playerSpeed;
         var elapsedTime = 0;
         while (elapsedTime < totalTime) {
           elapsedTime += timeStep;
@@ -90,7 +90,7 @@ function futureCollision(tile, direction, distance) {
  * TODO AI never intentionally dies. Sometimes it can make things quicker in the beginning. Would need to keep calculating even after deaths. Est: 3h (need to redo everything)
  */
 function AINext(tile,direction,depth,distance,justJumped) {
-  if (tile.i === tile.level.tileTableWidth-1 && tile.j === tile.level.tileTableHeight-1) {
+  if (tile.i === this.level.tileTableWidth-1 && tile.j === this.level.tileTableHeight-1) {
     return { jump: false, score: 10000/distance }; // reward the victory with the minimal distance spent to get there.
   }
   if (depth === 0) { return { jump: false, score: (tile.i+tile.j)/distance} } // reward going as far as possible from the origin in the minimum distance
@@ -116,10 +116,10 @@ function AINext(tile,direction,depth,distance,justJumped) {
 function nextTile(tile,direction) {
   var i = tile.i;
   var j = tile.j;
-  if (direction == Robot.directions.RIGHT && i < tile.level.tileTableWidth - 1) { return tile.level.tileTable[i + 1][j]; }
-  if (direction == Robot.directions.LEFT && i > 0) { return tile.level.tileTable[i - 1][j]; }
-  if (direction == Robot.directions.UP && j > 0) { return tile.level.tileTable[i][j - 1]; }
-  if (direction == Robot.directions.DOWN && j < tile.level.tileTableHeight - 1) { return tile.level.tileTable[i][j + 1]; }
+  if (direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
+  if (direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
+  if (direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
+  if (direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
 
   // No tile found, return null
   return null;
