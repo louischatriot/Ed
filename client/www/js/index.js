@@ -1,6 +1,6 @@
 var renderer = new Renderer();
 
-var level = new Level(renderer.tileSize, renderer.tileTableWidth, renderer.tileTableHeight);
+var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
 level.createNewLevel();
 level.addANewPlayer();
 level.addANewPlayer();
@@ -9,9 +9,8 @@ level.addANewPlayer();
 level.playerTable[2].AIControlled = true;
 level.playerTable[2].AIDepth = 4;
 
+// Remains to be seen: should we render a new frame every time the physics engine is updated?
 level.on('positions.updated', function () { renderer.drawNewFrame(level); });
-
-
 
 var startTouch = function(e) {
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.

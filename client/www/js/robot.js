@@ -127,15 +127,7 @@ function nextTile(tile,direction) {
 
 
 Robot.prototype.nextTile = function() {
-  var i = this.tile.i;
-  var j = this.tile.j;
-  if (this.direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
-  if (this.direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
-  if (this.direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
-  if (this.direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
-
-  // No tile found, return null
-  return null;
+  return nextTile(this.tile, this.direction);
 }
 
 

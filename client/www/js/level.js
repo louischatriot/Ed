@@ -1,5 +1,4 @@
-function Level(tileSize, tileTableWidth, tileTableHeight) {
-  this.tileSize = tileSize;
+function Level(tileTableWidth, tileTableHeight) {
   this.tileTableHeight = tileTableHeight;
   this.tileTableWidth = tileTableWidth;
   this.tileTable = new Array();
@@ -7,20 +6,17 @@ function Level(tileSize, tileTableWidth, tileTableHeight) {
   this.ennemyTable = new Array();
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
-  this.readyToJump = true; // to prevent a keydown from continually making a player jump
-  this.lastTime = Date.now(); //Used to measure the delay between rendering frames
-  this.currentlyPlaying = true; // Use to pause the game
+  this.readyToJump = true;   // To prevent a keydown from continually making a player jump
+  this.lastTime = Date.now();   // Used to measure the delay between rendering frames
+  this.currentlyPlaying = true;   // Use to pause the game
 
-  this.ennemyDifficulty = 0.2; //Higher means more ennemies will appear. Harder. Standard=0.1
-  this.maxEnnemyPerRow = 2; //number of ennemies per corridors. Higher is harder. standard=2
-  this.lengthDifficulty = 0.05; //Higher means shorter corridors. Harder. standard= 0.05
-  this.switchDifficulty = 0.4; //Higher means more tortuous corridors. Easier. standard=0.4
+  this.ennemyDifficulty = 0.2;   // Higher means more ennemies will appear. Harder. Standard=0.1
+  this.maxEnnemyPerRow = 2;   // Number of ennemies per corridors. Higher is harder. standard=2
+  this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
+  this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
 
   this.futureEnnemyPositions = new Array();
   this.ennemyClones = new Array();
-
-  this.renderTimer = 2;
-  this.physicsStepsBetweenRenderings = 1;
 
   this.listeners = {};
 }
@@ -261,20 +257,11 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 Level.prototype.update = function() {
   var newTime = Date.now();
   var timeGap = (newTime - this.lastTime);
-  if (timeGap > 100) {
-    this.physicStepsBetweenRenderings++; // if computer is lagging, we render less often
-  } else { this.physicsStepsBetweenRenderings = 1; }
   this.lastTime = newTime;
 
   if (this.currentlyPlaying) {
-    var l = this.ennemyTable.length;
-    for (var i = 0; i < l; i++) { this.ennemyTable[i].updatePosition(timeGap); }
-    l = this.playerTable.length;
-    for (var i = 0; i < l; i++) { this.playerTable[i].updatePosition(timeGap); }
-    this.renderTimer--;
-    if (this.renderTimer === 0) {
-      this.emit('positions.updated');
-      this.renderTimer = this.physicsStepsBetweenRenderings;
-    }
+    for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
+    for (var i = 0; i < this.playerTable.length; i++) { this.playerTable[i].updatePosition(timeGap); }
+    this.emit('positions.updated');
   }
 }
