@@ -1,7 +1,7 @@
 function Robot(tile, level, speed, isEnnemy) {
   this.level = level; // The level the Robot is currently playing in
   this.tile = tile;
-  this.distanceToNextTile = level.tileSize; // The distance between the Robot and the next Tile. Decreases with time.
+  this.distanceToNextTile = 1; // The distance between the Robot and the next Tile. Decreases with time.
   this.x = tile.x;
   this.y = tile.y;
   this.direction = Robot.directions.RIGHT;
@@ -15,7 +15,7 @@ function Robot(tile, level, speed, isEnnemy) {
 
 	this.speed = speed; // Different robots may have different speeds
 
-  this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed / level.tileSize; // Speed at which the robot increases during a jump. Just an animation parameter
+  this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed; // Speed at which the robot increases during a jump. Just an animation parameter
 
 	this.color = level.robotColor;
   if (isEnnemy) { this.color = level.ennemyColor; }
@@ -76,7 +76,7 @@ function futureCollision(tile, direction, distance) {
         ghostEnnemy.direction = e.direction;
         ghostEnnemy.distanceToNextTile = e.distanceToNextTile;
         var timeStep = 30;
-        var totalTime = tile.level.tileSize / tile.level.playerSpeed;
+        var totalTime = 1 / tile.level.playerSpeed;
         var elapsedTime = 0;
         while (elapsedTime < totalTime) {
           elapsedTime += timeStep;
@@ -147,9 +147,9 @@ Robot.prototype.nextTile = function() {
 
 Robot.prototype.reposition = function(tile) {
   this.tile = tile;
-	this.x = tile.i * this.level.tileSize + this.level.tileSize / 2 ;
-	this.y = tile.j * this.level.tileSize + this.level.tileSize / 2 ;
-	this.distanceToNextTile = this.level.tileSize;
+	this.x = tile.i + 1 / 2 ;
+	this.y = tile.j + 1 / 2 ;
+	this.distanceToNextTile = 1;
   this.jumping = false;
   this.direction = Robot.directions.RIGHT;
   this.direction = this.nextDirection();
@@ -282,7 +282,7 @@ Robot.prototype.updatePosition = function(timeGap) {
     this.tile = next;
     this.direction  =  this.nextDirection();
     var movementLeft = movement - this.distanceToNextTile;
-    this.distanceToNextTile = this.level.tileSize - movementLeft;
+    this.distanceToNextTile = 1 - movementLeft;
     if (this.direction === Robot.directions.RIGHT) this.x = this.tile.x + movementLeft;
     if (this.direction === Robot.directions.UP) this.y = this.tile.y - movementLeft;
     if (this.direction === Robot.directions.LEFT) this.x = this.tile.x - movementLeft;
@@ -295,7 +295,7 @@ Robot.prototype.updatePosition = function(timeGap) {
       }
       // first we create the table of future ennemy positions
       this.level.ennemyClones = new Array(); // eventually it would be better to keep the table stored from one step to the next
-      this.level.updateFutureEnnemyPositions(this.level.tileSize/this.speed , this.AIDepth); // TODO this shouldn't need to be recalculated every time. It's always the same table that just shifts by one every step. Est : 15min
+      this.level.updateFutureEnnemyPositions(1 / this.speed , this.AIDepth); // TODO this shouldn't need to be recalculated every time. It's always the same table that just shifts by one every step. Est : 15min
       var next = AINext(nextTile(this.tile,this.direction),this.direction,this.AIDepth,0,this.jumping);
       if (next.jump) { this.startAJump(); }
     }

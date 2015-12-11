@@ -72,7 +72,7 @@ Renderer.prototype.backToBackground = function (tileTable) {
  */
 Renderer.prototype.drawRobot = function (robot) {
   this.ctx.beginPath();
-  this.ctx.arc(robot.x, robot.y, robot.radius, 0, 2 * Math.PI);
+  this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
   this.ctx.fillStyle = robot.color;
   this.ctx.closePath();
   this.ctx.fill();

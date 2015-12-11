@@ -6,21 +6,21 @@ function Level(tileSize, tileTableWidth, tileTableHeight, robotRadius) {
   this.playerTable = new Array();
   this.ennemyTable = new Array();
   this.robotRadius = robotRadius;
-  this.ennemySpeed = 0.02 * tileSize / 30;
-  this.playerSpeed = 0.06 * tileSize / 30;
+  this.ennemySpeed = 0.02 / 30;
+  this.playerSpeed = 0.06 / 30;
   this.readyToJump = true; // to prevent a keydown from continually making a player jump
-  this.robotRadius = tileSize / 2;
+  this.robotRadius = 1 / 2;
   this.ennemyColor = "#7f8c8d";
   this.robotColor = "#2c3e50";
-  this.robotRadius = tileSize / 5;
-  this.maxJumpingRadius=this.robotRadius*1.3;
-  this.lastTime=Date.now(); //Used to measure the delay between rendering frames
-  this.currentlyPlaying=true; // Use to pause the game
+  this.robotRadius = 1 / 5;
+  this.maxJumpingRadius = this.robotRadius * 1.3;
+  this.lastTime = Date.now(); //Used to measure the delay between rendering frames
+  this.currentlyPlaying = true; // Use to pause the game
 
-  this.ennemyDifficulty=0.2; //Higher means more ennemies will appear. Harder. Standard=0.1
-  this.maxEnnemyPerRow=2; //number of ennemies per corridors. Higher is harder. standard=2
-  this.lengthDifficulty=0.05; //Higher means shorter corridors. Harder. standard= 0.05
-  this.switchDifficulty=0.4; //Higher means more tortuous corridors. Easier. standard=0.4
+  this.ennemyDifficulty = 0.2; //Higher means more ennemies will appear. Harder. Standard=0.1
+  this.maxEnnemyPerRow = 2; //number of ennemies per corridors. Higher is harder. standard=2
+  this.lengthDifficulty = 0.05; //Higher means shorter corridors. Harder. standard= 0.05
+  this.switchDifficulty = 0.4; //Higher means more tortuous corridors. Easier. standard=0.4
   this.colorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"]; //blue tones
   this.colorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"]; //red tones
   this.colorTable = ["#ecf0f1","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#95a5a6","#2c3e50"]; //mixed tones

@@ -1,10 +1,10 @@
-function Tile(i,j,k,level) {
+function Tile(i, j, k, level) {
 	this.level = level;
 	this.i = i; // Position in level.tileArray
 	this.j = j; // Position in level.tileArray
 	this.k = k; // vertical position in the tileArray, in case there are multiple levels.
-	this.x = level.tileSize * i + level.tileSize / 2;
-	this.y = level.tileSize * j + level.tileSize / 2;
+	this.x = i + 1 / 2;
+	this.y = j + 1 / 2;
 	this.type = 0; // 0 means is hasn't been filled by a corridor yet. All tiles in the same corridor have the same type
 	this.color = level.colorTable[this.type];
 	this.upWall = 1;
