@@ -10,17 +10,15 @@ function Robot(tile, level, speed, isEnnemy) {
   this.jumpingUp = true; // Each jump has two sequences. One up, one down.
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
-
-	this.speed = speed; // Different robots may have different speeds
-
-	this.color = level.robotColor;
-  if (isEnnemy) { this.color = level.ennemyColor; }
+	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
   this.AIControlled = false; // Keep false for human players
   this.canAIJumpTwiceInARow = false; // It's a bit too easy for the AI to keep continuously jumping. TODO: the parameter doesn't seem to change AI behavior
   this.AIDepth = 20; // the higher the depth, the better the AI, the slower the calculation. TODO: the depth is the number of tiles visited. It should really be the depth of the recursion, but this produces bad results. I'm not sure why
 }
+
+Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
 
 
 Robot.prototype.cloneFrom = function(anotherRobot) {
@@ -35,7 +33,6 @@ Robot.prototype.cloneFrom = function(anotherRobot) {
   this.AIControlled = anotherRobot.AIControlled;
 }
 
-Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
 
 function getOppositeDirection (direction) {
   if (direction === Robot.directions.UP) { return Robot.directions.DOWN; }
@@ -43,6 +40,7 @@ function getOppositeDirection (direction) {
   if (direction === Robot.directions.LEFT) { return Robot.directions.RIGHT; }
   if (direction === Robot.directions.RIGHT) { return Robot.directions.LEFT; }
 }
+
 
 function faceWallType(tile,direction,type) {
   if (direction === Robot.directions.RIGHT && tile.rightWall === type) { return true; }
@@ -58,7 +56,7 @@ function faceWallType(tile,direction,type) {
 function futureCollision(tile, direction, distance) {
   var futureEnnemyTable = tile.level.futureEnnemyPositions[distance];
   var l = futureEnnemyTable.length;
-  var safeDistance = tile.level.robotRadius * 4;
+  var safeDistance = 4 / 5;
   for (var i = 0; i < l; i++) {
       var e = futureEnnemyTable[i];
       if (e.tile.type === tile.type && Math.abs(tile.x - e.x) < safeDistance && Math.abs(tile.y - e.y) < safeDistance) {
@@ -163,7 +161,7 @@ Robot.prototype.distanceTo = function(anotherRobot) {
 
 // optimized collision function
 Robot.prototype.collisionWith = function(anotherRobot) {
-  var r = 2 * this.level.robotRadius;
+  var r = 2 / 5;
   if (Math.abs(anotherRobot.x - this.x) < r && Math.abs(anotherRobot.y - this.y) < r && this.distanceTo(anotherRobot) < r * r) {
       return true;
   }

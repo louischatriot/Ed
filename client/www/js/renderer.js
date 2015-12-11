@@ -42,6 +42,11 @@ function Renderer () {
 
 Renderer.robotRadius = 1 / 5;   // As % of tile size
 Renderer.robotMaxJumpingRadius = 1.3 * Renderer.robotRadius;
+Renderer.ennemyColor = "#7f8c8d";
+Renderer.robotColor = "#2c3e50";
+//Renderer.tileColorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"];   // Blue tones
+//Renderer.tileColorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"];   // Red tones
+Renderer.tileColorTable = ["#ecf0f1","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#95a5a6","#2c3e50"];   // Mixed tones
 
 
 /**
@@ -99,7 +104,7 @@ Renderer.prototype.drawRobot = function (robot, timeGap) {
 
   this.ctx.beginPath();
   this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
-  this.ctx.fillStyle = robot.color;
+  this.ctx.fillStyle = robot.isEnnemy ? Renderer.ennemyColor : Renderer.robotColor;
   this.ctx.closePath();
   this.ctx.fill();
 };
@@ -124,7 +129,7 @@ Renderer.prototype.drawNewFrame = function (level) {
  */
 Renderer.prototype.drawTile = function (tile) {
   // Draw the square itself
-  this.ctx.fillStyle = tile.color;
+  this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
   this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);
 
   // Draw the walls
