@@ -31,6 +31,9 @@ function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
 
   this.futureEnnemyPositions = new Array();
   this.ennemyClones = new Array();
+
+  this.renderTimer = 2;
+  this.physicsStepsBetweenRenderings = 1;
 }
 
 
@@ -297,6 +300,11 @@ Level.prototype.update = function() {
     for (var i = 0; i < l; i++) { this.ennemyTable[i].updatePosition(timeGap); }
     l = this.playerTable.length;
     for (var i = 0; i < l; i++) { this.playerTable[i].updatePosition(timeGap); }
-    this.render();
+    this.renderTimer--;
+    console.log(this.renderTimer);
+    if (this.renderTimer === 0) {
+      this.render();
+      this.renderTimer = this.physicsStepsBetweenRenderings;
+    }
   }
 }
