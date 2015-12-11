@@ -36,7 +36,12 @@ function Renderer () {
 
   this.lineWidth = 2;
   this.wallColor = "#2c3e50";
+
+  this.lastFrameDrawTime = Date.now();
 }
+
+Renderer.robotRadius = 1 / 5;   // As % of tile size
+Renderer.robotMaxJumpingRadius = 1.3 * Renderer.robotRadius;
 
 
 /**
@@ -70,12 +75,46 @@ Renderer.prototype.backToBackground = function (tileTable) {
  * Draw a robot, can be the current player, opponents or ennemies
  * Removed mention of cameraX and cameraY, unused for now
  */
-Renderer.prototype.drawRobot = function (robot) {
+Renderer.prototype.drawRobot = function (robot, timeGap) {
+  if (!robot.radius) { robot.radius = Renderer.robotRadius; }
+
+  // Jump animation
+  if (robot.jumping) {
+    if (robot.jumpingUp) {
+      if (robot.radius < Renderer.robotMaxJumpingRadius) {
+        robot.radius += timeGap * (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * 2 * robot.speed;
+      } else {
+        robot.jumpingUp = false;
+      }
+    } else {
+      if (robot.radius > Renderer.robotRadius) {
+        robot.radius -= timeGap * (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * 2 * robot.speed;
+      } else {
+        robot.radius = Renderer.robotRadius;
+        robot.jumping = false;
+        robot.jumpingUp = true;
+      }
+    }
+  }
+
   this.ctx.beginPath();
   this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
   this.ctx.fillStyle = robot.color;
   this.ctx.closePath();
   this.ctx.fill();
+};
+
+
+/**
+ * Draw a new frame
+ */
+Renderer.prototype.drawNewFrame = function (level) {
+  var frameDrawTime = Date.now(), timeGap = frameDrawTime - this.lastFrameDrawTime;
+  this.lastFrameDrawTime = frameDrawTime;
+
+  renderer.backToBackground(level.tileTable);
+  level.ennemyTable.forEach(function (robot) { renderer.drawRobot(robot, timeGap); });
+  level.playerTable.forEach(function (robot) { renderer.drawRobot(robot, timeGap); });
 };
 
 

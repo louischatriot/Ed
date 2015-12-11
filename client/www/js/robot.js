@@ -6,16 +6,12 @@ function Robot(tile, level, speed, isEnnemy) {
   this.y = tile.y;
   this.direction = Robot.directions.RIGHT;
 
-  this.radius = level.robotRadius;
-
 	this.jumping = false;
   this.jumpingUp = true; // Each jump has two sequences. One up, one down.
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 
 	this.speed = speed; // Different robots may have different speeds
-
-  this.speedRadiusIncrease = (this.level.maxJumpingRadius - this.radius) * 2 * this.speed; // Speed at which the robot increases during a jump. Just an animation parameter
 
 	this.color = level.robotColor;
   if (isEnnemy) { this.color = level.ennemyColor; }
@@ -239,25 +235,6 @@ Robot.prototype.nextDirection = function() {
  */
 Robot.prototype.updatePosition = function(timeGap) {
   if (!this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
-
-  // Animate jump
-  if (this.jumping) {
-    if (this.jumpingUp) {
-      if (this.radius < this.level.maxJumpingRadius) {
-        this.radius += timeGap * this.speedRadiusIncrease;
-      } else {
-        this.jumpingUp = false;
-      }
-    } else {
-      if (this.radius > this.level.robotRadius) {
-        this.radius = this.radius - timeGap * this.speedRadiusIncrease;
-      } else {
-        this.radius = this.level.robotRadius;
-        this.jumping = false;
-        this.jumpingUp = true;
-      }
-    }
-  }
 
   var movement = timeGap * this.speed;
   if (movement < this.distanceToNextTile) {

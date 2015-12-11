@@ -9,7 +9,6 @@ function Level(tileSize, tileTableWidth, tileTableHeight, robotRadius) {
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
   this.readyToJump = true; // to prevent a keydown from continually making a player jump
-  this.robotRadius = 1 / 2;
   this.ennemyColor = "#7f8c8d";
   this.robotColor = "#2c3e50";
   this.robotRadius = 1 / 5;

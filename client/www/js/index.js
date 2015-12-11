@@ -9,11 +9,7 @@ level.addANewPlayer();
 level.playerTable[2].AIControlled = true;
 level.playerTable[2].AIDepth = 4;
 
-level.on('positions.updated', function () {
-  renderer.backToBackground(level.tileTable);
-  level.ennemyTable.forEach(function (robot) { renderer.drawRobot(robot); });
-  level.playerTable.forEach(function (robot) { renderer.drawRobot(robot); });
-});
+level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
 
 
