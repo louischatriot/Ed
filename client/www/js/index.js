@@ -1,6 +1,6 @@
+var renderer = new Renderer();
 
-
-var theLevel = new Level(tileSize,tileTableWidth,tileTableHeight);
+var theLevel = new Level(renderer.tileSize, renderer.tileTableWidth, renderer.tileTableHeight);
 theLevel.createNewLevel();
 theLevel.addANewPlayer();
 theLevel.addANewPlayer();

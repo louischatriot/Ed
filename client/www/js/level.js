@@ -1,22 +1,18 @@
-function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
+function Level(tileSize, tileTableWidth, tileTableHeight, robotRadius) {
+  this.tileSize = tileSize;
   this.tileTableHeight = tileTableHeight;
   this.tileTableWidth = tileTableWidth;
-  this.tileSize = tileSize;
   this.tileTable = new Array();
   this.playerTable = new Array();
   this.ennemyTable = new Array();
   this.robotRadius = robotRadius;
-  this.ennemySpeed = 0.02*this.tileSize/30;
-  this.playerSpeed = 0.06*this.tileSize/30;
+  this.ennemySpeed = 0.02 * tileSize / 30;
+  this.playerSpeed = 0.06 * tileSize / 30;
   this.readyToJump = true; // to prevent a keydown from continually making a player jump
-  this.robotRadius = tileSize/2;
+  this.robotRadius = tileSize / 2;
   this.ennemyColor = "#7f8c8d";
   this.robotColor = "#2c3e50";
-  this.robotRadius = this.tileSize/5;
-  this.lineWidth = 2;
-  this.wallColor = "#2c3e50";
-  this.cameraX = 0; // when the camera moves
-  this.cameraY = 0; // when the camera moves
+  this.robotRadius = tileSize / 5;
   this.maxJumpingRadius=this.robotRadius*1.3;
   this.lastTime=Date.now(); //Used to measure the delay between rendering frames
   this.currentlyPlaying=true; // Use to pause the game

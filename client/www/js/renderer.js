@@ -1,49 +1,37 @@
-// TODO: completely localize
-var $container, $canvas, canvas, cxt;
-
-var tileSize = 30;
-if((navigator.userAgent.match(/iPhone/i)) || (navigator.userAgent.match(/iPod/i))) {
-  // if user is playing from an iphone. The phone tends to zoom out. This is one dirty fix. Maybe there is another way?
-	tileSize = 60;
-	lineWidth = 5;
-}
-
-var tileTableWidth, tileTableHeight;
-
-
 function Renderer () {
-  $container = $('<div id="container"></div>');
-  $container.css('position', 'fixed');
-  $container.css('top', '0px');
-  $container.css('left', '0px');
-  $container.css('right', '0px');
-  $container.css('bottom', '0px');
+  this.$container = $('<div id="container"></div>');
+  this.$container.css('position', 'fixed');
+  this.$container.css('top', '0px');
+  this.$container.css('left', '0px');
+  this.$container.css('right', '0px');
+  this.$container.css('bottom', '0px');
 
-  $canvas = $('<canvas></canvas>')
-  $canvas.css('position', 'absolute');
-  $canvas.css('width', '100%');
-  $canvas.css('height', '100%');
-  $canvas.css('border', 'none');
+  this.$canvas = $('<canvas></canvas>')
+  this.$canvas.css('position', 'absolute');
+  this.$canvas.css('width', '100%');
+  this.$canvas.css('height', '100%');
+  this.$canvas.css('border', 'none');
 
+  $('body').append(this.$container);
+  $('#container').append(this.$canvas);
 
-  $('body').append($container);
-  $('#container').append($canvas);
+  this.canvas = this.$canvas.get()[0];
+  this.canvas.width = this.$canvas.width();
+  this.canvas.height = this.$canvas.height();
+  this.ctx = this.canvas.getContext("2d");
 
+  // Tiling
+  this.tileSize = 30;
+  if((navigator.userAgent.match(/iPhone/i)) || (navigator.userAgent.match(/iPod/i))) {
+    // If user is playing from an iphone. The phone tends to zoom out. This is one dirty fix. Maybe there is another way?
+    this.tileSize = 60;
+    this.lineWidth = 5;
+  }
+  this.tileTableWidth = Math.floor(this.canvas.width / this.tileSize);
+  this.tileTableHeight = Math.floor(this.canvas.height / this.tileSize);
 
-  canvas = $canvas.get()[0];
-  canvas.width = $canvas.width();
-  canvas.height = $canvas.height();
-  cxt = canvas.getContext("2d");
-
-
-  tileTableWidth = Math.floor(canvas.width / tileSize);
-  tileTableHeight = Math.floor(canvas.height / tileSize);
-
-
-  this.canvas = canvas;
-  this.ctx = cxt;   // WARNING: I'm changing the name of the context (cxt to ctx)
-  this.tileTableWidth = tileTableWidth;
-  this.tileTableHeight = tileTableHeight;
+  this.lineWidth = 2;
+  this.wallColor = "#2c3e50";
 }
 
 
@@ -57,16 +45,16 @@ Renderer.prototype.backToBackground = function (tileTable) {
   if (!this.$backgroundImage) {
     for (var i = 0; i < this.tileTableWidth; i++) {
       for (var j = 0; j < this.tileTableHeight; j++) {
-        tileTable[i][j].draw();
+        this.drawTile(tileTable[i][j]);
       }
     }
 
-    this.$backgroundImage = $('<img src="' + canvas.toDataURL("image/png") + '">');
+    this.$backgroundImage = $('<img src="' + this.canvas.toDataURL("image/png") + '">');
     this.$backgroundImage.css('position', 'fixed');
     this.$backgroundImage.css('top', '0px');
     this.$backgroundImage.css('left', '0px');
-    this.$backgroundImage.css('width', canvas.width + 'px');
-    this.$backgroundImage.css('height', canvas.height + 'px');
+    this.$backgroundImage.css('width', this.canvas.width + 'px');
+    this.$backgroundImage.css('height', this.canvas.height + 'px');
 
     $('body').prepend(this.$backgroundImage);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height );
@@ -84,10 +72,47 @@ Renderer.prototype.drawRobot = function (robot) {
   this.ctx.fillStyle = robot.color;
   this.ctx.closePath();
   this.ctx.fill();
-
 };
 
 
+/**
+ * Draw a tile
+ * As above removed all mentions of cameraX and cameraY for now
+ */
+Renderer.prototype.drawTile = function (tile) {
+  // Draw the square itself
+  this.ctx.fillStyle = tile.color;
+  this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);
 
+  // Draw the walls
+  this.ctx.strokeStyle = this.wallColor;
+  if (tile.upWall !== Tile.wallType.NOWALL) {
+    this.ctx.lineWidth = this.lineWidth * (tile.upWall === Tile.wallType.HARD ? 3 : 1);
+    this.ctx.beginPath();
+    this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
+    this.ctx.lineTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
+    this.ctx.stroke();
+  }
+  if (tile.downWall !== Tile.wallType.NOWALL) {
+    this.ctx.lineWidth = this.lineWidth * (tile.downWall === Tile.wallType.HARD ? 3 : 1);
+    this.ctx.beginPath();
+    this.ctx.moveTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
+    this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
+    this.ctx.stroke();
+  }
+  if (tile.leftWall !== Tile.wallType.NOWALL) {
+    this.ctx.lineWidth = this.lineWidth * (tile.leftWall === Tile.wallType.HARD ? 3 : 1);
+    this.ctx.beginPath();
+    this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
+    this.ctx.lineTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
+    this.ctx.stroke();
+  }
+  if (tile.rightWall !== Tile.wallType.NOWALL) {
+    this.ctx.lineWidth = this.lineWidth * (tile.rightWall === Tile.wallType.HARD ? 3 : 1);
+    this.ctx.beginPath();
+    this.ctx.moveTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
+    this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
+    this.ctx.stroke();
+  }
+};
 
-var renderer = new Renderer();
