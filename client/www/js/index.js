@@ -1,21 +1,29 @@
 var renderer = new Renderer();
 
-var theLevel = new Level(renderer.tileSize, renderer.tileTableWidth, renderer.tileTableHeight);
-theLevel.createNewLevel();
-theLevel.addANewPlayer();
-theLevel.addANewPlayer();
-theLevel.playerTable[1].AIControlled = true;
-theLevel.addANewPlayer();
-theLevel.playerTable[2].AIControlled = true;
-theLevel.playerTable[2].AIDepth = 4;
+var level = new Level(renderer.tileSize, renderer.tileTableWidth, renderer.tileTableHeight);
+level.createNewLevel();
+level.addANewPlayer();
+level.addANewPlayer();
+level.playerTable[1].AIControlled = true;
+level.addANewPlayer();
+level.playerTable[2].AIControlled = true;
+level.playerTable[2].AIDepth = 4;
+
+level.on('positions.updated', function () {
+  renderer.backToBackground(level.tileTable);
+  level.ennemyTable.forEach(function (robot) { renderer.drawRobot(robot); });
+  level.playerTable.forEach(function (robot) { renderer.drawRobot(robot); });
+});
+
+
 
 var startTouch = function(e) {
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
-	theLevel.startTouch();
+	level.startTouch();
 }
 var endTouch = function(e) {
 	e.preventDefault();
-	theLevel.endTouch();
+	level.endTouch();
 }
 
 document.onkeydown = startTouch;
@@ -28,7 +36,7 @@ document.ontouchstart = startTouch;
 document.ontouchend = endTouch;
 
 var main = function () {
-	theLevel.update();
+	level.update();
 };
 
 setInterval(main, 20);

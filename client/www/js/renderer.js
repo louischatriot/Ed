@@ -1,3 +1,7 @@
+/**
+ * Renderer is responsible for displaying level and determining matrix size
+ * Completely decoupled from game logic
+ */
 function Renderer () {
   this.$container = $('<div id="container"></div>');
   this.$container.css('position', 'fixed');

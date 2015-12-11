@@ -30,7 +30,20 @@ function Level(tileSize, tileTableWidth, tileTableHeight, robotRadius) {
 
   this.renderTimer = 2;
   this.physicsStepsBetweenRenderings = 1;
+
+  this.listeners = {};
 }
+
+Level.prototype.on = function(evt, listener) {
+  if (!this.listeners[evt]) { this.listeners[evt] = []; }
+  this.listeners[evt].push(listener);
+};
+
+Level.prototype.emit = function (evt, message) {
+  if (this.listeners[evt]) {
+    this.listeners[evt].forEach(function (fn) { fn(message); });
+  }
+};
 
 
 Level.prototype.startTouch = function() {
@@ -254,13 +267,6 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 }
 
 
-Level.prototype.render = function() {
-  renderer.backToBackground(this.tileTable);
-  this.ennemyTable.forEach(function (robot) { renderer.drawRobot(robot); });
-  this.playerTable.forEach(function (robot) { renderer.drawRobot(robot); });
-}
-
-
 Level.prototype.update = function() {
   var newTime = Date.now();
   var timeGap = (newTime - this.lastTime);
@@ -276,7 +282,7 @@ Level.prototype.update = function() {
     for (var i = 0; i < l; i++) { this.playerTable[i].updatePosition(timeGap); }
     this.renderTimer--;
     if (this.renderTimer === 0) {
-      this.render();
+      this.emit('positions.updated');
       this.renderTimer = this.physicsStepsBetweenRenderings;
     }
   }
