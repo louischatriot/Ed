@@ -10,7 +10,7 @@ function Tile(i, j, k) {
 	this.leftWall = 1;
 	this.downWall = 1;
 	this.nearbyEnnemies = new Array(); // used to optimize collision detection. Each tile remembers the ennemies that are nearby
-	this.objective = true; // A robot will win the level when he reaches this tile.
+	this.isObjective = false; // A robot will win the level when he reaches this tile.
 }
 
 

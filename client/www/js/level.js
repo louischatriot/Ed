@@ -11,11 +11,15 @@ function Level(tileTableWidth, tileTableHeight) {
   this.currentlyPlaying = true;   // Use to pause the game
 
   this.ennemyDifficulty = 0.2;   // Higher means more ennemies will appear. Harder. Standard=0.1
-  this.maxEnnemyPerRow = 2;   // Number of ennemies per corridors. Higher is harder. standard=2
+  this.maxEnnemyPerRow = 4;   // Number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
 
+  this.blockOffSingleTiles = true; // There are two ways of dealing with single tile. The alternative is to open them
+
   this.startingTile;
+
+  this.kyu = 25;
 
   this.listeners = {};
 }
@@ -25,6 +29,11 @@ Level.prototype.on = function(evt, listener) {
   if (!this.listeners[evt]) { this.listeners[evt] = []; }
   this.listeners[evt].push(listener);
 };
+
+// Sometimes levels cannot be finished because there are too many ennemies in the ending corner.
+Level.prototype.removeEnnemiesFromTheEnd = function() {
+  //maybe this should go inside the code that creates the end.
+}
 
 
 Level.prototype.emit = function (evt, message) {
@@ -47,26 +56,46 @@ Level.prototype.endTouch = function() {
 }
 
 
+Level.prototype.nextDifficulty = function() {
+  this.currentlyPlaying = false;
+  if (this.kyu > 0) {
+    localStorage.setItem( 'EdKyu', JSON.stringify(this.kyu-1));
+    this.kyu --;
+  }
+  this.createNewLevel();
+  this.currentlyPlaying = true;
+}
+
+
 Level.prototype.addANewPlayer = function() {
   var newPlayer = new Robot(this.startingTile,this,this.playerSpeed,false); // creates a new player on the origin tile
-  if (this.startingTile.rightWall !== Tile.wallType.NOWALL) { newPlayer.direction = 3;} //could be done more elegantly. A bit of a hack
+  newPlayer.reposition(this.startingTile);
   this.playerTable.push(newPlayer);
+
+  newPlayer.on('win', function () { this.nextDifficulty(); });
+}
+
+
+Level.prototype.resetPlayers = function() {
+  for (var i = 0; i < this.playerTable.length; i++) {
+    this.playerTable[i].reposition(this.startingTile);
+  }
 }
 
 
 Level.prototype.reset = function() {
   this.tileTable = new Array();
 	for (var i = 0; i < this.tileTableWidth; i++) {
-		this.tileTable[i]=new Array();
+		this.tileTable[i] = new Array();
 		for (var j = 0; j < this.tileTableHeight; j++) {
-			this.tileTable[i][j] = new Tile(i,j,0,this);
+			this.tileTable[i][j] = new Tile(i ,j ,0 ,this);
 			if (i === 0) { this.tileTable[i][j].leftWall = Tile.wallType.HARD; }
-			if (i === this.tileTableWidth-1) { this.tileTable[i][j].rightWall = Tile.wallType.HARD; }
+			if (i === this.tileTableWidth - 1) { this.tileTable[i][j].rightWall = Tile.wallType.HARD; }
 			if (j === 0) { this.tileTable[i][j].upWall = Tile.wallType.HARD; }
-			if (j === this.tileTableHeight-1) { this.tileTable[i][j].downWall = Tile.wallType.HARD; }
+			if (j === this.tileTableHeight - 1) { this.tileTable[i][j].downWall = Tile.wallType.HARD; }
 		}
 	}
-	ennemyTable=new Array();
+	ennemyTable = new Array();
 }
 
 
@@ -92,18 +121,15 @@ Level.prototype.removeEverythingButSquareFromTileTable = function(mini, maxi, mi
 }
 
 
-Level.prototype.createNewLevel = function(kyu) {
-  if (kyu === 0) {
-    this.tileTableHeight = 10;
-  }
-  this.reset();
-  //this.removeEverythingButSquareFromTileTable(Math.floor(this.tileTableWidth / 6), this.tileTableWidth - Math.floor(this.tileTableWidth / 6), Math.floor(this.tileTableHeight / 2), Math.floor(this.tileTableHeight / 2));
-  //this.removeSquareFromTileTable(0, this.tileTableWidth - 1, 0, Math.floor(this.tileTableHeight / 2) - 1);
-  //this.removeSquareFromTileTable(0, this.tileTableWidth - 1, Math.floor(this.tileTableHeight / 2) + 1, this.tileTableHeight-1);
-  //this.removeSquareFromTileTable(0, Math.floor(this.tileTableHeight / 6), 0, this.tileTableHeight - 1 );
-  //this.removeSquareFromTileTable(this.tileTableWidth - Math.floor(this.tileTableHeight / 6), this.tileTableWidth - 1, 0, this.tileTableHeight - 1 );
 
-	for (var i = 0; i < this.tileTableWidth; i++) {
+Level.prototype.createNewLevel = function(kyu) {
+  this.reset();
+  this.ennemyDifficulty = 0.3 - 0.012 * this.kyu;
+
+  //the following line makes a single line in the middle of the screen. Could be useful for tutorial
+  //this.removeEverythingButSquareFromTileTable(Math.floor(this.tileTableWidth / 6), this.tileTableWidth - Math.floor(this.tileTableWidth / 6), Math.floor(this.tileTableHeight / 2), Math.floor(this.tileTableHeight / 2));
+
+  for (var i = 0; i < this.tileTableWidth; i++) {
 		for (var j = 0; j < this.tileTableHeight; j++) {
 			var XX=0;
 			var YY=0;
@@ -118,10 +144,13 @@ Level.prototype.createNewLevel = function(kyu) {
 			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*4)+2, 0, ennemyLeft);
 		}
 	}
-  //this.makeSingleTilesInaccessible();
-  this.makeSingleTilesOpen();
-  this.updateStartingTile();
+  if (this.blockOffSingleTiles) { this.makeSingleTilesInaccessible(); }
+  else {this.makeSingleTilesOpen(); }
 
+  this.updateStartingTile();
+  this.updateObjectiveTile();
+  this.resetPlayers();
+  this.emit('background.updated');
 }
 
 
@@ -139,6 +168,28 @@ Level.prototype.updateStartingTile = function() {
   }
 }
 
+
+Level.prototype.updateObjectiveTile = function() {
+  //this.tileTable[3][0].isObjective = true;
+  //return;
+  var counter = 0;
+  var maxCounter = 1;
+  for (var i = this.tileTableWidth - 1; i >= 0; i--) {
+    for (var j = this.tileTableHeight - 1; j >= 0; j--) {
+      var t = this.tileTable[i][j];
+      if (t.upWall === Tile.wallType.NOWALL || t.rightWall === Tile.wallType.NOWALL || t.downWall === Tile.wallType.NOWALL || t.leftWall === Tile.wallType.NOWALL) {
+        if (counter === maxCounter) {
+          t.isObjective = true;
+          t.removeEnnemiesFromCorridor(this);
+          return;
+        }
+        counter++;
+      }
+    }
+  }
+}
+
+
 // This solve the issue of tiles that find themselves alone in the corridor after the maze creation
 Level.prototype.makeSingleTilesInaccessible = function() {
   for (var i = 0; i < this.tileTableWidth; i++) {
@@ -151,7 +202,6 @@ Level.prototype.makeSingleTilesInaccessible = function() {
     }
   }
 }
-
 
 
 // A second solution for the lonely tile problem. This time we make them open. This may require that the player always turn right when possible
@@ -185,6 +235,7 @@ Level.prototype.makeSingleTilesOpen = function() {
     }
   }
 }
+
 
 /**
  * Recursive function used to create all the corridors in a new level

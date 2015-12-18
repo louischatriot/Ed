@@ -6,6 +6,8 @@ function Robot(tile, level, speed, isEnnemy) {
   this.y = tile.y;
   this.direction = Robot.directions.RIGHT;
 
+  this.kyu = 25; // How strong is this Robot?
+
 	this.jumping = false;
   this.jumpingUp = true; // Each jump has two sequences. One up, one down.
 
@@ -13,6 +15,8 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
   this.listeners = {};
+
+  this.alwaysTurnsRight = false; // enables maximal theoretical exploration
 }
 
 Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
@@ -77,6 +81,7 @@ Robot.prototype.distanceTo = function(anotherRobot) {
   return (this.x - anotherRobot.x) * (this.x - anotherRobot.x) + (this.y - anotherRobot.y) * (this.y - anotherRobot.y);
 }
 
+
 // optimized collision function
 Robot.prototype.collisionWith = function(anotherRobot) {
   var r = 2 / 5;
@@ -119,7 +124,10 @@ Robot.prototype.nextDirection = function() {
     return this.direction;
   }
 
-  for (var i = dirSequence.indexOf(this.direction); i < dirSequence.length; i += 1) {
+  var plus = 0;
+  if (this.alwaysTurnsRight) { plus = 1; }
+
+  for (var i = dirSequence.indexOf(this.direction) + plus; i < dirSequence.length; i += 1) {
     if (tileWalls[dirSequence[i]] === Tile.wallType.NOWALL && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i]; }
   }
 
@@ -164,6 +172,13 @@ Robot.prototype.updatePosition = function(timeGap) {
     if (this.direction === Robot.directions.LEFT) this.x = this.tile.x - movementLeft;
     if (this.direction === Robot.directions.DOWN) this.y = this.tile.y + movementLeft;
 
+    if (this.tile.isObjective) {
+      //this.emit('won'); // TODO: currently doesn't seem to work.
+      this.level.nextDifficulty(); // won't need this once emit works.
+    }
+
     this.emit('justPassedIntersection'); //send event for AI.
+
+
     }
 }

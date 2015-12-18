@@ -58,7 +58,7 @@ Renderer.tileColorTable = ["#ecf0f1","#7f8c8d","#1abc9c","#9b59b6","#e74c3c","#f
 Renderer.prototype.backToBackground = function (tileTable) {
   this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height );
 
-  if (!this.$backgroundImage) {
+  if (false || !this.$backgroundImage) {
     for (var i = 0; i < this.tileTableWidth; i++) {
       for (var j = 0; j < this.tileTableHeight; j++) {
         this.drawTile(tileTable[i][j]);
@@ -77,7 +77,10 @@ Renderer.prototype.backToBackground = function (tileTable) {
   }
 };
 
-//Draws a black frame around the maze. Purely esthetics. 
+
+/**
+ * Draws a black frame around the maze. Purely esthetics.
+ */
 Renderer.prototype.drawSurrounding = function () {
   this.ctx.strokeStyle = this.hardWallColor;
   this.ctx.lineWidth = 3;
@@ -90,6 +93,10 @@ Renderer.prototype.drawSurrounding = function () {
   this.ctx.stroke();
 }
 
+
+Renderer.prototype.newBackground = function() {
+  this.$backgroundImage = null;
+}
 
 
 /**
@@ -148,6 +155,13 @@ Renderer.prototype.drawTile = function (tile) {
   // Draw the square itself
   this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
   this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);
+
+  var objectiveSize = 0.5; //as % of tileSize
+  //Draw an objective tile if adequate.
+  if (tile.isObjective) {
+    this.ctx.fillStyle = Renderer.tileColorTable[0];
+    this.ctx.fillRect((tile.i + (1 - objectiveSize) / 2) * this.tileSize, (tile.j + (1 - objectiveSize) / 2) * this.tileSize, this.tileSize * objectiveSize, this.tileSize * objectiveSize)
+  }
 
   // Draw the walls
   if (tile.upWall !== Tile.wallType.NOWALL) {
