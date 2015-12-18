@@ -55,5 +55,5 @@ var main = function () {
 };
 
 
-setInterval(main, 20);
-//level.update(0);
+//setInterval(main, 20);
+level.update(0);

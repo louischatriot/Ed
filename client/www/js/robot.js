@@ -1,3 +1,37 @@
+/**
+ * Cyclic array, all indices are cast to a range of the given size (between 0 and size - 1)
+ * this.i always points to the latest inserted element
+ */
+function CyclicArray (size) {
+  this.a = [];
+  this.i = size - 1;
+  this.size = size;
+
+  this.stales = [];
+  for (var i = 0; i < size; i += 1) { this.stales[i] = true; }
+}
+
+CyclicArray.prototype.push = function (elt) {
+  this.i += 1;
+  if (this.i >= this.size) { this.i -= this.size; }
+  this.a[this.i] = elt;
+  this.stales[this.i] = false;
+};
+
+CyclicArray.prototype.pop = function () {
+  if (this.stales[this.i]) { throw "Can't access stale element"; }
+
+  var elt = this.a[this.i];
+  this.stales[this.i] = true;
+  this.i -= 1;
+  if (this.i < 0) { this.i += this.size; }
+  return elt;
+};
+
+
+/**
+ * Robot (can be player or an ennemy)
+ */
 function Robot(tile, level, speed, isEnnemy) {
   this.level = level; // The level the Robot is currently playing in
   this.x = tile.x;
@@ -11,7 +45,10 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
-  this.tilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 1;
+  // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
+  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 1;
+  this.tilesToRemember = new CyclicArray(nTilesToRemember);
+  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordNewVisit(); }
 
   this.listeners = {};
 }
@@ -124,10 +161,6 @@ Robot.prototype.nextDirection = function() {
   var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
     , tileWalls = {};
 
-  //console.log("=============================");
-  //console.log(this);
-  //console.log(this.level.tileTable[Math.floor(this.x)][Math.floor(this.y)]);
-
   // TODO: this is of course not satisfying, we should use the same structure for indexing tile walls
   tileWalls[Robot.directions.UP] = this.getCurrentTile().upWall;
   tileWalls[Robot.directions.RIGHT] = this.getCurrentTile().rightWall;
@@ -149,39 +182,73 @@ Robot.prototype.nextDirection = function() {
 /**
  * Update position
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated
+ *
+ * TODO: edge case where robot stops exactly on tile center will probably cause a bug, the trigger for recording is not the right one
  */
 Robot.prototype.updatePosition = function(timeGap) {
   if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
 
   var movement = timeGap * this.speed;
 
-  // Finish movement on current tile
-  var movementOnCurrentTile = Math.min(movement, this.getMovementLeftOnTile());
-  if (this.direction === Robot.directions.RIGHT) { this.x += movementOnCurrentTile; }
-  if (this.direction === Robot.directions.UP) { this.y -= movementOnCurrentTile; }
-  if (this.direction === Robot.directions.LEFT) { this.x -= movementOnCurrentTile; }
-  if (this.direction === Robot.directions.DOWN) { this.y += movementOnCurrentTile; }
-  movement -= movementOnCurrentTile;
+  if (movement < 0) {   // Going back in time
+    movement = -movement;
 
-  // Move all the complete tiles possible
-  var next;
-  while (Math.floor(movement) > 0) {
-    movement -= 1;
-    this.direction = this.nextDirection();
-    next = this.nextTile();
-    this.x = next.x;
-    this.y = next.y;
+    // Go back to start of current tile
+    this.direction = getOppositeDirection(this.direction);
+    var movementOnCurrentTile = Math.min(movement, this.getMovementLeftOnTile());
+    if (this.direction === Robot.directions.RIGHT) { this.x += movementOnCurrentTile; }
+    if (this.direction === Robot.directions.UP) { this.y -= movementOnCurrentTile; }
+    if (this.direction === Robot.directions.LEFT) { this.x -= movementOnCurrentTile; }
+    if (this.direction === Robot.directions.DOWN) { this.y += movementOnCurrentTile; }
+    movement -= movementOnCurrentTile;
+
+    // Go back as many complete tiles as possible
+    var nTiles = Math.floor(movement);
+    var tile;
+    for (var i = 0; i < nTiles; i += 1) {
+      movement -= 1;
+      tile = this.tilesToRemember.pop();
+    }
+
+    // Last tile
+    tile = this.tilesToRemember.pop();
+    this.direction = getOppositeDirection(tile.direction);
+    if (this.direction === Robot.directions.RIGHT) { this.x += movement; }
+    if (this.direction === Robot.directions.UP) { this.y -= movement; }
+    if (this.direction === Robot.directions.LEFT) { this.x -= movement; }
+    if (this.direction === Robot.directions.DOWN) { this.y += movement; }
+    this.direction = getOppositeDirection(this.direction);
+
+  } else {   // Going forward in time
+    // Finish movement on current tile
+    var movementOnCurrentTile = Math.min(movement, this.getMovementLeftOnTile());
+    if (this.direction === Robot.directions.RIGHT) { this.x += movementOnCurrentTile; }
+    if (this.direction === Robot.directions.UP) { this.y -= movementOnCurrentTile; }
+    if (this.direction === Robot.directions.LEFT) { this.x -= movementOnCurrentTile; }
+    if (this.direction === Robot.directions.DOWN) { this.y += movementOnCurrentTile; }
+    movement -= movementOnCurrentTile;
+
+    // Move as many complete tiles as possible
+    var next;
+    while (Math.floor(movement) > 0) {
+      this.recordNewVisit();
+      movement -= 1;
+      this.direction = this.nextDirection();
+      next = this.nextTile();
+      this.x = next.x;
+      this.y = next.y;
+    }
+
+    // Move on the last tile
+    if (movement > 0) {
+      this.recordNewVisit();
+      this.direction = this.nextDirection();
+    }
+    if (this.direction === Robot.directions.RIGHT) { this.x += movement; }
+    if (this.direction === Robot.directions.UP) { this.y -= movement; }
+    if (this.direction === Robot.directions.LEFT) { this.x -= movement; }
+    if (this.direction === Robot.directions.DOWN) { this.y += movement; }
   }
-
-  if (movement > 0) {
-    this.direction = this.nextDirection();
-  }
-
-  // Move on the last tile
-  if (this.direction === Robot.directions.RIGHT) { this.x += movement; }
-  if (this.direction === Robot.directions.UP) { this.y -= movement; }
-  if (this.direction === Robot.directions.LEFT) { this.x -= movement; }
-  if (this.direction === Robot.directions.DOWN) { this.y += movement; }
 }
 
 
@@ -214,4 +281,15 @@ Robot.prototype.getCurrentTile = function () {
     return null;
   }
 };
+
+
+/**
+ * Record that we visited a new tile. Use a rolling fixed-size array
+ */
+Robot.prototype.recordNewVisit = function () {
+  this.tilesToRemember.push({ tile: this.getCurrentTile(), direction: this.direction });
+};
+
+
+
 

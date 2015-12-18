@@ -9,7 +9,6 @@ function Tile(i, j, k) {
 	this.rightWall = 1;
 	this.leftWall = 1;
 	this.downWall = 1;
-	this.nearbyEnnemies = new Array(); // used to optimize collision detection. Each tile remembers the ennemies that are nearby
 }
 
 
