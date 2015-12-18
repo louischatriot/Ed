@@ -1,7 +1,5 @@
 function Robot(tile, level, speed, isEnnemy) {
   this.level = level; // The level the Robot is currently playing in
-  this.tile = tile;
-  this.distanceToNextTile = 1; // The distance between the Robot and the next Tile. Decreases with time.
   this.x = tile.x;
   this.y = tile.y;
   this.direction = Robot.directions.RIGHT;
@@ -38,8 +36,6 @@ Robot.prototype.on = function(evt, listener) {
 
 Robot.prototype.cloneFrom = function(anotherRobot) {
   this.level = anotherRobot.level;
-  this.tile = anotherRobot.tile;
-  this.distanceToNextTile = anotherRobot.distanceToNextTile;
   this.x = anotherRobot.x;
   this.y = anotherRobot.y;
   this.speed = anotherRobot.speed;
@@ -78,10 +74,8 @@ Robot.prototype.nextTile = function(_tile, _direction) {
 
 
 Robot.prototype.reposition = function(tile) {
-  this.tile = tile;
 	this.x = tile.i + 1 / 2 ;
 	this.y = tile.j + 1 / 2 ;
-	this.distanceToNextTile = 1;
   this.jumping = false;
   this.direction = Robot.directions.RIGHT;
   this.direction = this.nextDirection();
