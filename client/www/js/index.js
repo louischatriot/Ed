@@ -2,7 +2,7 @@ var renderer = new Renderer();
 
 var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
 level.createNewLevel();
-level.addANewPlayer();
+p = level.addANewPlayer();
 
 //level.addANewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
@@ -55,4 +55,5 @@ var main = function () {
 };
 
 
-setInterval(main, 800);
+setInterval(main, 20);
+//level.update(0);

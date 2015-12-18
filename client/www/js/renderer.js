@@ -77,7 +77,7 @@ Renderer.prototype.backToBackground = function (tileTable) {
   }
 };
 
-//Draws a black frame around the maze. Purely esthetics. 
+//Draws a black frame around the maze. Purely esthetics
 Renderer.prototype.drawSurrounding = function () {
   this.ctx.strokeStyle = this.hardWallColor;
   this.ctx.lineWidth = 3;

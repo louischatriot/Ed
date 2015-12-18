@@ -9,7 +9,7 @@ function Level(tileTableWidth, tileTableHeight) {
   this.readyToJump = true;   // To prevent a keydown from continually making a player jump
   this.currentlyPlaying = true;   // Use to pause the game
 
-  this.ennemyDifficulty = 0.2;   // Higher means more ennemies will appear. Harder. Standard=0.1
+  this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow = 2;   // Number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
@@ -18,6 +18,7 @@ function Level(tileTableWidth, tileTableHeight) {
   this.listeners = {};
 }
 
+// TODO: externalize in a config object
 Level.maxTimeGapStep = 20;   // In ms, the maximum time gap with which level.update can ba called.
                              // If higher, the gap is broken down in smaller steps to avoid bad robot positioning
                              // A continuous approach would be better but much harder to implement IMO
@@ -53,6 +54,7 @@ Level.prototype.addANewPlayer = function() {
   var newPlayer = new Robot(this.tileTable[0][0],this,this.playerSpeed,false); // creates a new player on the origin tile
   if (this.tileTable[0][0].rightWall === 1) { newPlayer.direction = 3;} //could be done more elegantly. A bit of a hack
   this.playerTable.push(newPlayer);
+  return newPlayer;
 }
 
 
@@ -251,23 +253,23 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 
 /**
  * Move game forward by timeGap ms
+ * @param {Number} timeGap How much to move time forward
+ * @param {Boolean} dontUpdate Optional, if set to true don't update rest of the world (usually to avoid useless and time consuming redraws)
  */
-Level.prototype.update = function(timeGap) {
+Level.prototype.update = function(timeGap, dontUpdate) {
   if (timeGap > 1.01 * Level.maxTimeGapStep) {   // The 1.01 here is to avoid possible infinite recursion due to floating point math errors
     var fullSteps = Math.floor(timeGap / Level.maxTimeGapStep);
     timeGap -= fullSteps * Level.maxTimeGapStep;
-
     for (var i = 0; i < fullSteps; i += 1) {
-      this.update(Level.maxTimeGapStep);
+      this.update(Level.maxTimeGapStep, true);
     }
     this.update(timeGap);
-
     return;
   }
 
   if (this.currentlyPlaying) {
     for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
     for (var i = 0; i < this.playerTable.length; i++) { this.playerTable[i].updatePosition(timeGap); }
-    this.emit('positions.updated');
+    if (! dontUpdate) { this.emit('positions.updated'); }
   }
 }

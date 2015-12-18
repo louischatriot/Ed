@@ -13,10 +13,15 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
+  this.tilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 1;
+
   this.listeners = {};
 }
 
 Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+
+// TODO: extenralize in config object
+Robot.timeToRemember = 5000;   // In ms, how much history to remember for this robot
 
 
 Robot.prototype.emit = function (evt, message) {
@@ -53,8 +58,22 @@ function getOppositeDirection (direction) {
 
 
 
-Robot.prototype.nextTile = function() {
-  return nextTile(this.tile, this.direction);
+Robot.prototype.nextTile = function(_tile, _direction) {
+  var tile = _tile || this.getCurrentTile()
+    , direction = _direction || this.direction
+    ;
+
+  if (!tile) { return null; }
+
+  var i = tile.i;
+  var j = tile.j;
+  if (direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
+  if (direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
+  if (direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
+  if (direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
+
+  // No tile found, return null
+  return null;
 }
 
 
@@ -110,11 +129,16 @@ Robot.prototype.hitEnnemy = function() {
 Robot.prototype.nextDirection = function() {
   var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
     , tileWalls = {};
+
+  //console.log("=============================");
+  //console.log(this);
+  //console.log(this.level.tileTable[Math.floor(this.x)][Math.floor(this.y)]);
+
   // TODO: this is of course not satisfying, we should use the same structure for indexing tile walls
-  tileWalls[Robot.directions.UP] = this.tile.upWall;
-  tileWalls[Robot.directions.RIGHT] = this.tile.rightWall;
-  tileWalls[Robot.directions.DOWN] = this.tile.downWall;
-  tileWalls[Robot.directions.LEFT] = this.tile.leftWall;
+  tileWalls[Robot.directions.UP] = this.getCurrentTile().upWall;
+  tileWalls[Robot.directions.RIGHT] = this.getCurrentTile().rightWall;
+  tileWalls[Robot.directions.DOWN] = this.getCurrentTile().downWall;
+  tileWalls[Robot.directions.LEFT] = this.getCurrentTile().leftWall;
 
   if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) {
     return this.direction;
@@ -129,42 +153,71 @@ Robot.prototype.nextDirection = function() {
 
 
 /**
- * Update position and animate robot (name is probably not well chosen ...)
- * Called at every loop
+ * Update position
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated
  */
 Robot.prototype.updatePosition = function(timeGap) {
-  if (!this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
+  if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
 
   var movement = timeGap * this.speed;
-  if (movement < this.distanceToNextTile) {
-    // Keep going in the same direction
-    this.distanceToNextTile -= movement;
-    if (this.direction === Robot.directions.RIGHT) this.x += movement;
-    if (this.direction === Robot.directions.UP) this.y -= movement;
-    if (this.direction === Robot.directions.LEFT) this.x -= movement;
-    if (this.direction === Robot.directions.DOWN) this.y += movement;
-  } else {
-    // Going by an intersection
-    var next = this.nextTile();
 
-    if (this.isEnnemy) {
-      next.nearbyEnnemies.push(this);
-      var index  =  this.tile.nearbyEnnemies.indexOf(this);
-      if (index > -1) {
-        this.tile.nearbyEnnemies.splice(index,1);
-      }
-    }
+  // Finish movement on current tile
+  var movementOnCurrentTile = Math.min(movement, this.getMovementLeftOnTile());
+  if (this.direction === Robot.directions.RIGHT) { this.x += movementOnCurrentTile; }
+  if (this.direction === Robot.directions.UP) { this.y -= movementOnCurrentTile; }
+  if (this.direction === Robot.directions.LEFT) { this.x -= movementOnCurrentTile; }
+  if (this.direction === Robot.directions.DOWN) { this.y += movementOnCurrentTile; }
+  movement -= movementOnCurrentTile;
 
-    this.tile = next;
-    this.direction  =  this.nextDirection();
-    var movementLeft = movement - this.distanceToNextTile;
-    this.distanceToNextTile = 1 - movementLeft;
-    if (this.direction === Robot.directions.RIGHT) this.x = this.tile.x + movementLeft;
-    if (this.direction === Robot.directions.UP) this.y = this.tile.y - movementLeft;
-    if (this.direction === Robot.directions.LEFT) this.x = this.tile.x - movementLeft;
-    if (this.direction === Robot.directions.DOWN) this.y = this.tile.y + movementLeft;
+  // Move all the complete tiles possible
+  var next;
+  while (Math.floor(movement) > 0) {
+    movement -= 1;
+    this.direction = this.nextDirection();
+    next = this.nextTile();
+    this.x = next.x;
+    this.y = next.y;
+  }
 
-    this.emit('justPassedIntersection'); //send event for AI.
-    }
+  if (movement > 0) {
+    this.direction = this.nextDirection();
+  }
+
+  // Move on the last tile
+  if (this.direction === Robot.directions.RIGHT) { this.x += movement; }
+  if (this.direction === Robot.directions.UP) { this.y -= movement; }
+  if (this.direction === Robot.directions.LEFT) { this.x -= movement; }
+  if (this.direction === Robot.directions.DOWN) { this.y += movement; }
 }
+
+
+/**
+ * Get how much movement can still be made before being on the next tile (understood as being on or after the 0.5; 0.5 point)
+ */
+Robot.prototype.getMovementLeftOnTile = function () {
+  var position, sign;
+  if (this.direction === Robot.directions.RIGHT) { position = this.x; sign = 1; }
+  if (this.direction === Robot.directions.UP) { position = this.y; sign = -1; }
+  if (this.direction === Robot.directions.LEFT) { position = this.x; sign = -1; }
+  if (this.direction === Robot.directions.DOWN) { position = this.y; sign = 1; }
+
+  if (Math.floor(position - 1 / 2) === position - 1 / 2) {
+    return 0;
+  } else {
+    return Math.abs(Math.floor(position - (sign / 2)) - position + 1 / 2 + sign);
+  }
+};
+
+
+/**
+ * Get current tile (strictly speaking, between the 0;0 and 1;1 points
+ * Return null if out of tile table
+ */
+Robot.prototype.getCurrentTile = function () {
+  if (this.level.tileTable[Math.floor(this.x)] && this.level.tileTable[Math.floor(this.x)][Math.floor(this.y)]) {
+    return this.level.tileTable[Math.floor(this.x)][Math.floor(this.y)];
+  } else {
+    return null;
+  }
+};
+
