@@ -17,6 +17,9 @@ level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
 
 var startTouch = function(e) {
+  // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
+  if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
+
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
 }
@@ -38,9 +41,18 @@ document.ontouchstart = startTouch;
 document.ontouchend = endTouch;
 
 
+/**
+ * Main loop
+ */
+var lastTime = Date.now();
+
 var main = function () {
-	level.update();
+  var newTime = Date.now();
+  var timeGap = (newTime - lastTime);
+  lastTime = newTime;
+
+	level.update(timeGap);
 };
 
 
-setInterval(main, 20);
+setInterval(main, 800);

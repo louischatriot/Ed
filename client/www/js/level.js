@@ -7,7 +7,6 @@ function Level(tileTableWidth, tileTableHeight) {
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
   this.readyToJump = true;   // To prevent a keydown from continually making a player jump
-  this.lastTime = Date.now();   // Used to measure the delay between rendering frames
   this.currentlyPlaying = true;   // Use to pause the game
 
   this.ennemyDifficulty = 0.2;   // Higher means more ennemies will appear. Harder. Standard=0.1
@@ -18,6 +17,10 @@ function Level(tileTableWidth, tileTableHeight) {
 
   this.listeners = {};
 }
+
+Level.maxTimeGapStep = 20;   // In ms, the maximum time gap with which level.update can ba called.
+                             // If higher, the gap is broken down in smaller steps to avoid bad robot positioning
+                             // A continuous approach would be better but much harder to implement IMO
 
 
 Level.prototype.on = function(evt, listener) {
@@ -246,10 +249,21 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 }
 
 
-Level.prototype.update = function() {
-  var newTime = Date.now();
-  var timeGap = (newTime - this.lastTime);
-  this.lastTime = newTime;
+/**
+ * Move game forward by timeGap ms
+ */
+Level.prototype.update = function(timeGap) {
+  if (timeGap > 1.01 * Level.maxTimeGapStep) {   // The 1.01 here is to avoid possible infinite recursion due to floating point math errors
+    var fullSteps = Math.floor(timeGap / Level.maxTimeGapStep);
+    timeGap -= fullSteps * Level.maxTimeGapStep;
+
+    for (var i = 0; i < fullSteps; i += 1) {
+      this.update(Level.maxTimeGapStep);
+    }
+    this.update(timeGap);
+
+    return;
+  }
 
   if (this.currentlyPlaying) {
     for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
