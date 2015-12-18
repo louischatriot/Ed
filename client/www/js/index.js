@@ -1,7 +1,15 @@
 var renderer = new Renderer();
 
+var playerLevel = 0;
+
+if (localStorage.getItem('EdKyu')) {
+	playerLevel = localStorage.getItem('EdKyu');
+}
+
+localStorage.setItem( 'EdKyu', playerLevel);
+
 var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
-level.createNewLevel();
+level.createNewLevel(1);
 level.addANewPlayer();
 
 //level.addANewPlayer();

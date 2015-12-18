@@ -15,6 +15,7 @@ function Level(tileTableWidth, tileTableHeight) {
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
 
+  this.startingTile;
 
   this.listeners = {};
 }
@@ -47,8 +48,8 @@ Level.prototype.endTouch = function() {
 
 
 Level.prototype.addANewPlayer = function() {
-  var newPlayer = new Robot(this.tileTable[0][0],this,this.playerSpeed,false); // creates a new player on the origin tile
-  if (this.tileTable[0][0].rightWall === 1) { newPlayer.direction = 3;} //could be done more elegantly. A bit of a hack
+  var newPlayer = new Robot(this.startingTile,this,this.playerSpeed,false); // creates a new player on the origin tile
+  if (this.startingTile.rightWall !== Tile.wallType.NOWALL) { newPlayer.direction = 3;} //could be done more elegantly. A bit of a hack
   this.playerTable.push(newPlayer);
 }
 
@@ -69,8 +70,39 @@ Level.prototype.reset = function() {
 }
 
 
-Level.prototype.createNewLevel = function() {
+Level.prototype.removeSquareFromTileTable = function(mini, maxi, minj, maxj) {
+  if (mini >= maxi || minj >= maxj) { return; }
+  for (var i = mini; i <= maxi; i++) {
+    for (var j = minj; j <= maxj; j++) {
+      this.tileTable[i][j].makeInnaccessible(this);
+    }
+  }
+}
+
+
+Level.prototype.removeEverythingButSquareFromTileTable = function(mini, maxi, minj, maxj) {
+  if (mini > maxi || minj > maxj) { return; }
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      if (i < mini || i > maxi || j < minj || j > maxj) {
+        this.tileTable[i][j].makeInnaccessible(this);
+      }
+    }
+  }
+}
+
+
+Level.prototype.createNewLevel = function(kyu) {
+  if (kyu === 0) {
+    this.tileTableHeight = 10;
+  }
   this.reset();
+  //this.removeEverythingButSquareFromTileTable(Math.floor(this.tileTableWidth / 6), this.tileTableWidth - Math.floor(this.tileTableWidth / 6), Math.floor(this.tileTableHeight / 2), Math.floor(this.tileTableHeight / 2));
+  //this.removeSquareFromTileTable(0, this.tileTableWidth - 1, 0, Math.floor(this.tileTableHeight / 2) - 1);
+  //this.removeSquareFromTileTable(0, this.tileTableWidth - 1, Math.floor(this.tileTableHeight / 2) + 1, this.tileTableHeight-1);
+  //this.removeSquareFromTileTable(0, Math.floor(this.tileTableHeight / 6), 0, this.tileTableHeight - 1 );
+  //this.removeSquareFromTileTable(this.tileTableWidth - Math.floor(this.tileTableHeight / 6), this.tileTableWidth - 1, 0, this.tileTableHeight - 1 );
+
 	for (var i = 0; i < this.tileTableWidth; i++) {
 		for (var j = 0; j < this.tileTableHeight; j++) {
 			var XX=0;
@@ -86,25 +118,69 @@ Level.prototype.createNewLevel = function() {
 			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*4)+2, 0, ennemyLeft);
 		}
 	}
-  this.makeSingleTilesInaccessible();
+  //this.makeSingleTilesInaccessible();
+  this.makeSingleTilesOpen();
+  this.updateStartingTile();
+
 }
 
+
+// selects the first tile (alphabetically) that has an open wall as the starting point for robots. Also removes all the ennemies from the corresponding corridor
+Level.prototype.updateStartingTile = function() {
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      var t = this.tileTable[i][j];
+      if (t.upWall === Tile.wallType.NOWALL || t.rightWall === Tile.wallType.NOWALL || t.downWall === Tile.wallType.NOWALL || t.leftWall === Tile.wallType.NOWALL) {
+        this.startingTile = t;
+        t.removeEnnemiesFromCorridor(this);
+        return;
+      }
+    }
+  }
+}
+
+// This solve the issue of tiles that find themselves alone in the corridor after the maze creation
 Level.prototype.makeSingleTilesInaccessible = function() {
   for (var i = 0; i < this.tileTableWidth; i++) {
     for (var j = 0; j < this.tileTableHeight; j++) {
       var t = this.tileTable[i][j];
       if (t.upWall !== Tile.wallType.NOWALL && t.rightWall !== Tile.wallType.NOWALL && t.downWall !== Tile.wallType.NOWALL && t.leftWall !== Tile.wallType.NOWALL) {
         //It is a corridor made of a single tile
-        t.upWall = Tile.wallType.HARD;
-        t.downWall = Tile.wallType.HARD;
-        t.leftWall = Tile.wallType.HARD;
-        t.rightWall = Tile.wallType.HARD;
-        t.newType(1);
-        if (i > 0) { this.tileTable[i - 1][j].rightWall = Tile.wallType.HARD; }
-        if (i < this.tileTableWidth - 1) { this.tileTable[i + 1][j].leftWall = Tile.wallType.HARD; }
-        if (j > 0) { this.tileTable[i][j - 1].downWall = Tile.wallType.HARD; }
-        if (j < this.tileTableHeight - 1) { this.tileTable[i][j+1].upWall = Tile.wallType.HARD; }
+        this.tileTable[i][j].makeInnaccessible(this);
+      }
+    }
+  }
+}
 
+
+
+// A second solution for the lonely tile problem. This time we make them open. This may require that the player always turn right when possible
+Level.prototype.makeSingleTilesOpen = function() {
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      var t = this.tileTable[i][j];
+
+      if (t.upWall !== Tile.wallType.NOWALL && t.rightWall !== Tile.wallType.NOWALL && t.downWall !== Tile.wallType.NOWALL && t.leftWall !== Tile.wallType.NOWALL) {
+        if (t.upWall != Tile.wallType.HARD) {
+          t.upWall = Tile.wallType.NOWALL;
+          this.tileTable[i][j - 1].downWall = Tile.wallType.NOWALL;
+          t.newType(this.tileTable[i][j - 1].type);
+        }
+        else if (t.downWall != Tile.wallType.HARD) {
+          t.downWall = Tile.wallType.NOWALL;
+          this.tileTable[i][j + 1].upWall = Tile.wallType.NOWALL;
+          t.newType(this.tileTable[i][j + 1].type);
+        }
+        else if (t.rightWall != Tile.wallType.HARD) {
+          t.rightWall = Tile.wallType.NOWALL;
+          this.tileTable[i + 1][j].leftWall = Tile.wallType.NOWALL;
+          t.newType(this.tileTable[i + 1][j].type);
+        }
+        else if (t.leftWall != Tile.wallType.HARD) {
+          t.leftWall = Tile.wallType.NOWALL;
+          this.tileTable[i - 1][j].rightWall = Tile.wallType.NOWALL;
+          t.newType(this.tileTable[i - 1][j].type);
+        }
       }
     }
   }
@@ -123,6 +199,7 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
     //add an ennemy on this tile
 		var ennemy = new Robot(startTile, this, this.ennemySpeed, true);
     this.ennemyTable.push(ennemy);
+    startTile.nearbyEnnemies.push(ennemy);
 		ennemyLeft--;
 	}
 

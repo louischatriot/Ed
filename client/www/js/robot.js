@@ -12,7 +12,6 @@ function Robot(tile, level, speed, isEnnemy) {
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
-
   this.listeners = {};
 }
 
@@ -52,7 +51,6 @@ function getOppositeDirection (direction) {
 }
 
 
-
 Robot.prototype.nextTile = function() {
   return nextTile(this.tile, this.direction);
 }
@@ -64,6 +62,7 @@ Robot.prototype.reposition = function(tile) {
 	this.y = tile.j + 1 / 2 ;
 	this.distanceToNextTile = 1;
   this.jumping = false;
+  this.jumpingUp = true;
   this.direction = Robot.directions.RIGHT;
   this.direction = this.nextDirection();
 }
@@ -98,7 +97,7 @@ Robot.prototype.checkInterception = function() {
 
 
 Robot.prototype.hitEnnemy = function() {
-  this.reposition(this.level.tileTable[0][0]);
+  this.reposition(this.level.startingTile);
 }
 
 
