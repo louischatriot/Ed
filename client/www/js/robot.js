@@ -116,10 +116,12 @@ Robot.prototype.nextDirection = function() {
   tileWalls[Robot.directions.DOWN] = this.tile.downWall;
   tileWalls[Robot.directions.LEFT] = this.tile.leftWall;
 
-  if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) { return this.direction; }
+  if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) {
+    return this.direction;
+  }
 
   for (var i = dirSequence.indexOf(this.direction); i < dirSequence.length; i += 1) {
-    if (tileWalls[dirSequence[i]] === 0 && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i]; }
+    if (tileWalls[dirSequence[i]] === Tile.wallType.NOWALL && getOppositeDirection(this.direction) !== dirSequence[i]) { return dirSequence[i]; }
   }
 
   return getOppositeDirection(this.direction);

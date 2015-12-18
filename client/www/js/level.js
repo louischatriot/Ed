@@ -83,12 +83,32 @@ Level.prototype.createNewLevel = function() {
 			else YY = -1;
 			var ennemyLeft = this.maxEnnemyPerRow;
 			if (i === 0 && j === 0) ennemyLeft=0; // Makes sure you don't meet an ennemy in the very first path
-			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*5)+1, 0, ennemyLeft);
+			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*4)+2, 0, ennemyLeft);
 		}
 	}
+  this.makeSingleTilesInaccessible();
 }
 
+Level.prototype.makeSingleTilesInaccessible = function() {
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      var t = this.tileTable[i][j];
+      if (t.upWall !== Tile.wallType.NOWALL && t.rightWall !== Tile.wallType.NOWALL && t.downWall !== Tile.wallType.NOWALL && t.leftWall !== Tile.wallType.NOWALL) {
+        //It is a corridor made of a single tile
+        t.upWall = Tile.wallType.HARD;
+        t.downWall = Tile.wallType.HARD;
+        t.leftWall = Tile.wallType.HARD;
+        t.rightWall = Tile.wallType.HARD;
+        t.newType(1);
+        if (i > 0) { this.tileTable[i - 1][j].rightWall = Tile.wallType.HARD; }
+        if (i < this.tileTableWidth - 1) { this.tileTable[i + 1][j].leftWall = Tile.wallType.HARD; }
+        if (j > 0) { this.tileTable[i][j - 1].downWall = Tile.wallType.HARD; }
+        if (j < this.tileTableHeight - 1) { this.tileTable[i][j+1].upWall = Tile.wallType.HARD; }
 
+      }
+    }
+  }
+}
 
 /**
  * Recursive function used to create all the corridors in a new level

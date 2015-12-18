@@ -4,15 +4,15 @@ var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
 level.createNewLevel();
 level.addANewPlayer();
 
-level.addANewPlayer();
-var theAI = new AI(level,level.playerTable[1]);
+//level.addANewPlayer();
+//var theAI = new AI(level,level.playerTable[1]);
 
 
 // Remains to be seen: should we render a new frame every time the physics engine is updated?
 level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
 // Should this next line be in the AI constructor?
-level.playerTable[1].on('justPassedIntersection', function () { theAI.makeDecisionOnNextJump(); });
+//level.playerTable[1].on('justPassedIntersection', function () { theAI.makeDecisionOnNextJump(); });
 
 
 
