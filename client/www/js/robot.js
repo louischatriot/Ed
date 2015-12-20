@@ -18,13 +18,20 @@ CyclicArray.prototype.push = function (elt) {
   this.stales[this.i] = false;
 };
 
-CyclicArray.prototype.pop = function () {
+CyclicArray.prototype.getLatest = function () {
   if (this.stales[this.i]) { throw "Can't access stale element"; }
+  return this.a[this.i];
+};
 
-  var elt = this.a[this.i];
+CyclicArray.prototype.staleLatest = function () {
   this.stales[this.i] = true;
   this.i -= 1;
   if (this.i < 0) { this.i += this.size; }
+};
+
+CyclicArray.prototype.pop = function () {
+  var elt = this.getLatest();
+  this.staleLatest();
   return elt;
 };
 
@@ -46,9 +53,9 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.isEnnemy = isEnnemy;
 
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
-  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 1;
-  this.tilesToRemember = new CyclicArray(nTilesToRemember);
-  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordNewVisit(); }
+  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 4;
+  this.controlPoints = new CyclicArray(nTilesToRemember);
+  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordControlPoint({ center: tile.center() }); }
 
   this.listeners = {};
 }
@@ -181,9 +188,7 @@ Robot.prototype.nextDirection = function() {
 
 /**
  * Update position
- * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated
- *
- * TODO: edge case where robot stops exactly on tile center will probably cause a bug, the trigger for recording is not the right one
+ * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
  */
 Robot.prototype.updatePosition = function (timeGap) {
   if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
@@ -193,33 +198,21 @@ Robot.prototype.updatePosition = function (timeGap) {
 
   if (movement < 0) {   // Going back in time
     movement = -movement;
+    var controlPoint, movementToPerform, staleControlPoint;
 
-    // Go back to start of current tile
-    this.direction = getOppositeDirection(this.direction);
-    var movementOnCurrentTile = Math.min(movement, this.getMovementLeftOnTile());
-    if (this.direction === Robot.directions.RIGHT) { this.x += movementOnCurrentTile; }
-    if (this.direction === Robot.directions.UP) { this.y -= movementOnCurrentTile; }
-    if (this.direction === Robot.directions.LEFT) { this.x -= movementOnCurrentTile; }
-    if (this.direction === Robot.directions.DOWN) { this.y += movementOnCurrentTile; }
-    movement -= movementOnCurrentTile;
+    while (movement > 0) {
+      // TODO: for now only center-type control points are used
+      controlPoint = this.controlPoints.getLatest();
+      staleControlPoint = this.movementTo(controlPoint.center) < movement;
+      movementToPerform = Math.min(movement, this.movementTo(controlPoint.center));
+      movement -= movementToPerform;
+      this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
 
-    // Go back as many complete tiles as possible
-    var nTiles = Math.floor(movement);
-    var tile;
-    for (var i = 0; i < nTiles; i += 1) {
-      movement -= 1;
-      tile = this.tilesToRemember.pop();
+      if (staleControlPoint) {
+        this.controlPoints.staleLatest();
+        this.direction = this.controlPoints.getLatest().direction;
+      }
     }
-
-    // Last tile
-    tile = this.tilesToRemember.pop();
-    this.direction = getOppositeDirection(tile.direction);
-    if (this.direction === Robot.directions.RIGHT) { this.x += movement; }
-    if (this.direction === Robot.directions.UP) { this.y -= movement; }
-    if (this.direction === Robot.directions.LEFT) { this.x -= movement; }
-    if (this.direction === Robot.directions.DOWN) { this.y += movement; }
-    this.direction = getOppositeDirection(this.direction);
-
   } else {   // Going forward in time
     var nextCenter, movementToPerform, registerCenter = false;
 
@@ -228,15 +221,11 @@ Robot.prototype.updatePosition = function (timeGap) {
       registerCenter = this.movementTo(nextCenter) <= movement;
       movementToPerform = Math.min(movement, this.movementTo(nextCenter));
       movement -= movementToPerform;
-
-      if (this.direction === Robot.directions.RIGHT) { this.x += movementToPerform; }
-      if (this.direction === Robot.directions.UP) { this.y -= movementToPerform; }
-      if (this.direction === Robot.directions.LEFT) { this.x -= movementToPerform; }
-      if (this.direction === Robot.directions.DOWN) { this.y += movementToPerform; }
+      this.move(movementToPerform);
 
       if (registerCenter) {
         this.direction = this.nextDirection();
-        this.recordNewVisit();
+        this.recordControlPoint({ center: nextCenter });
       }
     }
   }
@@ -244,20 +233,15 @@ Robot.prototype.updatePosition = function (timeGap) {
 
 
 /**
- * Get how much movement can still be made before being on the next tile (understood as being on or after the 0.5; 0.5 point)
+ * Move robot by quantity movement in direction direction (defaulting to robot's current direction)
  */
-Robot.prototype.getMovementLeftOnTile = function () {
-  var position, sign;
-  if (this.direction === Robot.directions.RIGHT) { position = this.x; sign = 1; }
-  if (this.direction === Robot.directions.UP) { position = this.y; sign = -1; }
-  if (this.direction === Robot.directions.LEFT) { position = this.x; sign = -1; }
-  if (this.direction === Robot.directions.DOWN) { position = this.y; sign = 1; }
+Robot.prototype.move = function (movement, _direction) {
+  var direction = _direction || this.direction;
 
-  if (Math.floor(position - 1 / 2) === position - 1 / 2) {
-    return 0;
-  } else {
-    return Math.abs(Math.floor(position - (sign / 2)) - position + 1 / 2 + sign);
-  }
+  if (direction === Robot.directions.RIGHT) { this.x += movement; }
+  if (direction === Robot.directions.UP) { this.y -= movement; }
+  if (direction === Robot.directions.LEFT) { this.x -= movement; }
+  if (direction === Robot.directions.DOWN) { this.y += movement; }
 };
 
 
@@ -312,10 +296,13 @@ Robot.prototype.movementTo = function (x, y) {
 
 
 /**
- * Record that we visited a new tile. Use a rolling fixed-size array
+ * Record a new control point (a tile center, a death etc.)
  */
-Robot.prototype.recordNewVisit = function () {
-  this.tilesToRemember.push({ tile: this.getTile(), direction: this.direction });
+Robot.prototype.recordControlPoint = function (payload) {
+  if (payload.center) {   // Recording a center
+    this.controlPoints.push({ center: payload.center, direction: this.direction });
+    return;
+  }
 };
 
 

@@ -20,9 +20,15 @@ var startTouch = function(e) {
   // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
   if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
 
+  // Start/pause
   if (e.keyCode === 27) {
-    console.log(intervalId);
     if (intervalId !== undefined) { pause(); } else { start(); }
+    return;
+  }
+
+  // Go back in time
+  if (e.keyCode === 13) {
+    timeDirection *= -1;
     return;
   }
 
@@ -51,13 +57,14 @@ document.ontouchend = endTouch;
  * Main loop
  */
 var lastTime
-  , intervalId = undefined;
+  , intervalId = undefined
+  , timeDirection = 1;
 
 function main () {
   var newTime = Date.now();
   var timeGap = (newTime - lastTime);
   lastTime = newTime;
-	level.update(timeGap);
+	level.update(timeDirection * timeGap);
 }
 
 function start () {
