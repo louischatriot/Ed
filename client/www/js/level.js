@@ -121,7 +121,6 @@ Level.prototype.removeEverythingButSquareFromTileTable = function(mini, maxi, mi
 }
 
 
-
 Level.prototype.createNewLevel = function(kyu) {
   this.reset();
   this.ennemyDifficulty = 0.3 - 0.012 * this.kyu;
