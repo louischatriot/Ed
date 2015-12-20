@@ -1,40 +1,40 @@
-function Level(tileSize,tileTableWidth,tileTableHeight,robotRadius) {
+function Level(tileTableWidth, tileTableHeight) {
   this.tileTableHeight = tileTableHeight;
   this.tileTableWidth = tileTableWidth;
-  this.tileSize = tileSize;
   this.tileTable = new Array();
   this.playerTable = new Array();
   this.ennemyTable = new Array();
-  this.robotRadius = robotRadius;
-  this.ennemySpeed = 0.02*this.tileSize/30;
-  this.playerSpeed = 0.06*this.tileSize/30;
-  this.readyToJump = true; // to prevent a keydown from continually making a player jump
-  this.robotRadius = tileSize/2;
-  this.ennemyColor = "#7f8c8d";
-  this.robotColor = "#2c3e50";
-  this.robotRadius = this.tileSize/5;
-  this.lineWidth = 2;
-  this.wallColor = "#2c3e50";
-  this.cameraX = 0; // when the camera moves
-  this.cameraY = 0; // when the camera moves
-  this.maxJumpingRadius=this.robotRadius*1.3;
-  this.lastTime=Date.now(); //Used to measure the delay between rendering frames
-  this.currentlyPlaying=true; // Use to pause the game
+  this.ennemySpeed = 0.02 / 30;
+  this.playerSpeed = 0.06 / 30;
+  this.readyToJump = true;   // To prevent a keydown from continually making a player jump
+  this.currentlyPlaying = true;   // Use to pause the game
 
-  this.ennemyDifficulty=0.2; //Higher means more ennemies will appear. Harder. Standard=0.1
-  this.maxEnnemyPerRow=2; //number of ennemies per corridors. Higher is harder. standard=2
-  this.lengthDifficulty=0.05; //Higher means shorter corridors. Harder. standard= 0.05
-  this.switchDifficulty=0.4; //Higher means more tortuous corridors. Easier. standard=0.4
-  this.colorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"]; //blue tones
-  this.colorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"]; //red tones
-  this.colorTable = ["#ecf0f1","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#95a5a6","#2c3e50"]; //mixed tones
+  this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
+  this.maxEnnemyPerRow = 2;   // Number of ennemies per corridors. Higher is harder. standard=2
+  this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
+  this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
 
-  this.futureEnnemyPositions = new Array();
-  this.ennemyClones = new Array();
 
-  this.renderTimer = 2;
-  this.physicsStepsBetweenRenderings = 1;
+  this.listeners = {};
 }
+
+// TODO: externalize in a config object
+Level.maxTimeGapStep = 20;   // In ms, the maximum time gap with which level.update can ba called.
+                             // If higher, the gap is broken down in smaller steps to avoid bad robot positioning
+                             // A continuous approach would be better but much harder to implement IMO
+
+
+Level.prototype.on = function(evt, listener) {
+  if (!this.listeners[evt]) { this.listeners[evt] = []; }
+  this.listeners[evt].push(listener);
+};
+
+
+Level.prototype.emit = function (evt, message) {
+  if (this.listeners[evt]) {
+    this.listeners[evt].forEach(function (fn) { fn(message); });
+  }
+};
 
 
 Level.prototype.startTouch = function() {
@@ -54,6 +54,7 @@ Level.prototype.addANewPlayer = function() {
   var newPlayer = new Robot(this.tileTable[0][0],this,this.playerSpeed,false); // creates a new player on the origin tile
   if (this.tileTable[0][0].rightWall === 1) { newPlayer.direction = 3;} //could be done more elegantly. A bit of a hack
   this.playerTable.push(newPlayer);
+  return newPlayer;
 }
 
 
@@ -87,40 +88,32 @@ Level.prototype.createNewLevel = function() {
 			else YY = -1;
 			var ennemyLeft = this.maxEnnemyPerRow;
 			if (i === 0 && j === 0) ennemyLeft=0; // Makes sure you don't meet an ennemy in the very first path
-			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*5)+1, 0, ennemyLeft);
+			this.createPath(this.tileTable[i][j], this.lengthDifficulty, this.switchDifficulty, this.ennemyDifficulty, 1, 0, Math.floor(Math.random()*4)+2, 0, ennemyLeft);
 		}
 	}
+  this.makeSingleTilesInaccessible();
 }
 
+Level.prototype.makeSingleTilesInaccessible = function() {
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      var t = this.tileTable[i][j];
+      if (t.upWall !== Tile.wallType.NOWALL && t.rightWall !== Tile.wallType.NOWALL && t.downWall !== Tile.wallType.NOWALL && t.leftWall !== Tile.wallType.NOWALL) {
+        //It is a corridor made of a single tile
+        t.upWall = Tile.wallType.HARD;
+        t.downWall = Tile.wallType.HARD;
+        t.leftWall = Tile.wallType.HARD;
+        t.rightWall = Tile.wallType.HARD;
+        t.newType(1);
+        if (i > 0) { this.tileTable[i - 1][j].rightWall = Tile.wallType.HARD; }
+        if (i < this.tileTableWidth - 1) { this.tileTable[i + 1][j].leftWall = Tile.wallType.HARD; }
+        if (j > 0) { this.tileTable[i][j - 1].downWall = Tile.wallType.HARD; }
+        if (j < this.tileTableHeight - 1) { this.tileTable[i][j+1].upWall = Tile.wallType.HARD; }
 
-Level.prototype.cloneEnnemies = function() {
-  this.ennemyClones = new Array();
-  for (var i = 0; i < this.ennemyTable.length; i++) {
-    var newEnnemy = new Robot(this.ennemyTable[i].tile, this, this.ennemyTable[i].speed, true);
-    newEnnemy.cloneFrom(this.ennemyTable[i]);
-    this.ennemyClones.push(newEnnemy);
-  }
-}
-
-
-//Push the future ennemy position by depth steps
-Level.prototype.updateFutureEnnemyPositions = function(stepTimeGap,depth) {
-  if (this.ennemyClones.length === 0) {
-    this.cloneEnnemies();
-    this.futureEnnemyPositions = new Array();
-  }
-  for (var j = 0; j < depth; j++) {
-    var newStep = new Array();
-    // move the cloned ennemies by one step;
-    for (var i = 0; i < this.ennemyClones.length; i++) {
-      this.ennemyClones[i].updatePosition(stepTimeGap);
-      //TODO: we might as well make a full clone. Just saving a little bit of memory at this point
-      newStep.push({ x: this.ennemyClones[i].x, y: this.ennemyClones[i].y, tile: this.ennemyClones[i].tile, direction: this.ennemyClones[i].direction, distanceToNextTile: this.ennemyClones[i].distanceToNextTile });
+      }
     }
-    this.futureEnnemyPositions.push(newStep);
   }
 }
-
 
 /**
  * Recursive function used to create all the corridors in a new level
@@ -133,7 +126,7 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 
 	if (Math.random() < ennemyProba && ennemyLeft > 0 && currentLength > 2) {
     //add an ennemy on this tile
-		var ennemy = new Robot(startTile, this, this.ennemySpeed, true, this.ennemyColor);
+		var ennemy = new Robot(startTile, this, this.ennemySpeed, true);
     this.ennemyTable.push(ennemy);
 		ennemyLeft--;
 	}
@@ -258,56 +251,25 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
 }
 
 
-Level.prototype.render = function() {
-  	cxt.clearRect( 0, 0 , canvas.width , canvas.height ); // not the most efficient way to go
-
-    // Save background as an image to avoid redrawing it at every cycle - very CPU consuming
-    if (!this.$background) {
-      $('canvas').css('position', 'fixed');
-      $('canvas').css('top', '0px');
-      $('canvas').css('left', '0px');
-
-      for (var i = 0; i < this.tileTableWidth; i++) {
-        for (var j = 0; j < this.tileTableHeight; j++) { this.tileTable[i][j].draw(); }
-      }
-
-      this.$background = $('<img src="' + canvas.toDataURL("image/png") + '">');
-      this.$background.css('position', 'fixed');
-      this.$background.css('top', '0px');
-      this.$background.css('left', '0px');
-      this.$background.css('width', canvas.width + 'px');
-      this.$background.css('height', canvas.height + 'px');
-
-      $('body').prepend(this.$background);
-      cxt.clearRect( 0, 0 , canvas.width , canvas.height ); // not the most efficient way to go
+/**
+ * Move game forward by timeGap ms
+ * @param {Number} timeGap How much to move time forward
+ * @param {Boolean} dontUpdate Optional, if set to true don't update rest of the world (usually to avoid useless and time consuming redraws)
+ */
+Level.prototype.update = function(timeGap, dontUpdate) {
+  if (timeGap > 1.01 * Level.maxTimeGapStep) {   // The 1.01 here is to avoid possible infinite recursion due to floating point math errors
+    var fullSteps = Math.floor(timeGap / Level.maxTimeGapStep);
+    timeGap -= fullSteps * Level.maxTimeGapStep;
+    for (var i = 0; i < fullSteps; i += 1) {
+      this.update(Level.maxTimeGapStep, true);
     }
-
-  	var l = this.ennemyTable.length;
-  	for (var i = 0; i < l; i++) { this.ennemyTable[i].draw(); }
-
-    l = this.playerTable.length;
-    for (var i = 0; i < l; i++) { this.playerTable[i].draw(); }
-}
-
-
-Level.prototype.update = function() {
-  var newTime = Date.now();
-  var timeGap = (newTime - this.lastTime);
-  if (timeGap > 100) {
-    this.physicStepsBetweenRenderings++; // if computer is lagging, we render less often
-  } else { this.physicsStepsBetweenRenderings = 1; }
-  this.lastTime = newTime;
+    this.update(timeGap);
+    return;
+  }
 
   if (this.currentlyPlaying) {
-    var l = this.ennemyTable.length;
-    for (var i = 0; i < l; i++) { this.ennemyTable[i].updatePosition(timeGap); }
-    l = this.playerTable.length;
-    for (var i = 0; i < l; i++) { this.playerTable[i].updatePosition(timeGap); }
-    this.renderTimer--;
-    console.log(this.renderTimer);
-    if (this.renderTimer === 0) {
-      this.render();
-      this.renderTimer = this.physicsStepsBetweenRenderings;
-    }
+    for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
+    for (var i = 0; i < this.playerTable.length; i++) { this.playerTable[i].updatePosition(timeGap); }
+    if (! dontUpdate) { this.emit('positions.updated'); }
   }
 }

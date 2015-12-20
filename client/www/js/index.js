@@ -1,39 +1,59 @@
-var canvas = document.createElement("canvas");
-canvas.style.border = "none";
-var cxt = canvas.getContext("2d"); // Need to turn that into a local variable
+var renderer = new Renderer();
 
-canvas.width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-canvas.height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
+level.createNewLevel();
+p = level.addANewPlayer();
+
+//level.addANewPlayer();
+//var theAI = new AI(level,level.playerTable[1]);
 
 
-document.body.appendChild(canvas);
+// Remains to be seen: should we render a new frame every time the physics engine is updated?
+level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
-var tileSize = 30;
-if((navigator.userAgent.match(/iPhone/i)) || (navigator.userAgent.match(/iPod/i))) {
-  // if user is playing from an iphone. The phone tends to zoom out. This is one dirty fix. Maybe there is another way?
-	tileSize = 60;
-	lineWidth = 5;
-}
+// Should this next line be in the AI constructor?
+//level.playerTable[1].on('justPassedIntersection', function () { theAI.makeDecisionOnNextJump(); });
 
-var tileTableWidth = Math.floor(canvas.width / tileSize);
-var tileTableHeight = Math.floor(canvas.height / tileSize);
-var theLevel = new Level(tileSize,tileTableWidth,tileTableHeight);
-theLevel.createNewLevel();
-theLevel.addANewPlayer();
-theLevel.addANewPlayer();
-theLevel.playerTable[1].AIControlled = true;
-theLevel.addANewPlayer();
-theLevel.playerTable[2].AIControlled = true;
-theLevel.playerTable[2].AIDepth = 4;
+
 
 var startTouch = function(e) {
+  console.log(e.keyCode);
+
+  // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
+  if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
+
+  // Start/pause
+  if (e.keyCode === 27) {
+    if (intervalId !== undefined) { pause(); } else { start(); }
+    return;
+  }
+
+  // Go back in time
+  if (e.keyCode === 13) {
+    timeDirection *= -1;
+    return;
+  }
+
+  // Increase/decrease speed
+  if (e.keyCode === 38) {
+    speedBoost *= 1.1;
+    return;
+  }
+  if (e.keyCode === 40) {
+    speedBoost /= 1.1;
+    return;
+  }
+
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
-	theLevel.startTouch();
+	level.startTouch();
 }
+
+
 var endTouch = function(e) {
 	e.preventDefault();
-	theLevel.endTouch();
+	level.endTouch();
 }
+
 
 document.onkeydown = startTouch;
 document.onkeyup = endTouch;
@@ -44,8 +64,34 @@ document.onmouseup = endTouch;
 document.ontouchstart = startTouch;
 document.ontouchend = endTouch;
 
-var main = function () {
-	theLevel.update();
-};
 
-setInterval(main, 20);
+/**
+ * Main loop
+ */
+var lastTime
+  , intervalId = undefined
+  , timeDirection = 1
+  , speedBoost = 1
+  ;
+
+function main () {
+  var newTime = Date.now();
+  var timeGap = (newTime - lastTime);
+  lastTime = newTime;
+	level.update(speedBoost * timeDirection * timeGap);
+}
+
+function start () {
+  lastTime = Date.now();
+  intervalId = setInterval(main, 20);
+}
+
+function pause () {
+  clearInterval(intervalId);
+  intervalId = undefined;
+}
+
+
+
+//setInterval(main, 20);
+level.update(0);
