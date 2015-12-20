@@ -20,6 +20,12 @@ var startTouch = function(e) {
   // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
   if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
 
+  if (e.keyCode === 27) {
+    console.log(intervalId);
+    if (intervalId !== undefined) { pause(); } else { start(); }
+    return;
+  }
+
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
 }
@@ -44,15 +50,26 @@ document.ontouchend = endTouch;
 /**
  * Main loop
  */
-var lastTime = Date.now();
+var lastTime
+  , intervalId = undefined;
 
-var main = function () {
+function main () {
   var newTime = Date.now();
   var timeGap = (newTime - lastTime);
   lastTime = newTime;
-
 	level.update(timeGap);
-};
+}
+
+function start () {
+  lastTime = Date.now();
+  intervalId = setInterval(main, 20);
+}
+
+function pause () {
+  clearInterval(intervalId);
+  intervalId = undefined;
+}
+
 
 
 //setInterval(main, 20);
