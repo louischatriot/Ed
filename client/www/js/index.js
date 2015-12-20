@@ -17,6 +17,8 @@ level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
 
 var startTouch = function(e) {
+  console.log(e.keyCode);
+
   // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
   if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
 
@@ -29,6 +31,16 @@ var startTouch = function(e) {
   // Go back in time
   if (e.keyCode === 13) {
     timeDirection *= -1;
+    return;
+  }
+
+  // Increase/decrease speed
+  if (e.keyCode === 38) {
+    speedBoost *= 1.1;
+    return;
+  }
+  if (e.keyCode === 40) {
+    speedBoost /= 1.1;
     return;
   }
 
@@ -58,13 +70,15 @@ document.ontouchend = endTouch;
  */
 var lastTime
   , intervalId = undefined
-  , timeDirection = 1;
+  , timeDirection = 1
+  , speedBoost = 1
+  ;
 
 function main () {
   var newTime = Date.now();
   var timeGap = (newTime - lastTime);
   lastTime = newTime;
-	level.update(timeDirection * timeGap);
+	level.update(speedBoost * timeDirection * timeGap);
 }
 
 function start () {
