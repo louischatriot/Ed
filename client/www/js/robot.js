@@ -23,6 +23,14 @@ CyclicArray.prototype.getLatest = function () {
   return this.a[this.i];
 };
 
+// Nth from the beginning, latest being 0
+CyclicArray.prototype.getNth = function (_n) {
+  var n = this.i - _n;
+  if (n < 0) { n += this.size; }
+  if (this.stales[n]) { throw "Can't access stale element"; }
+  return this.a[n];
+};
+
 CyclicArray.prototype.staleLatest = function () {
   this.stales[this.i] = true;
   this.i -= 1;
@@ -33,6 +41,15 @@ CyclicArray.prototype.pop = function () {
   var elt = this.getLatest();
   this.staleLatest();
   return elt;
+};
+
+// Execute a function on all non stale elements, in reverse chronological order
+CyclicArray.prototype.reverseExecute = function (fn) {
+  for (var n = 0; n < this.size; n += 1) {
+    try {
+      fn(this.getNth(n));
+    } catch (e) {}   // Do nothing on error
+  }
 };
 
 
@@ -55,15 +72,15 @@ function Robot(tile, level, speed, isEnnemy) {
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
   var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 4;
   this.controlPoints = new CyclicArray(nTilesToRemember);
-  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordControlPoint({ center: tile.center() }); }
+  for (var i = 0; i < nTilesToRemember; i += 1) { this.controlPoints.push({ center: tile.center(), direction: this.direction }); }
 
   this.listeners = {};
 }
 
-Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
 
 // TODO: extenralize in config object
-Robot.timeToRemember = 5000;   // In ms, how much history to remember for this robot
+Robot.timeToRemember = 1500;   // In ms, how much history to remember for this robot
 
 
 Robot.prototype.emit = function (evt, message) {
@@ -225,7 +242,7 @@ Robot.prototype.updatePosition = function (timeGap) {
 
       if (registerCenter) {
         this.direction = this.nextDirection();
-        this.recordControlPoint({ center: nextCenter });
+        this.controlPoints.push({ center: nextCenter, direction: this.direction });
       }
     }
   }
@@ -293,18 +310,4 @@ Robot.prototype.movementTo = function (x, y) {
 
   return Math.abs(this.x - x) + Math.abs(this.y - y);
 };
-
-
-/**
- * Record a new control point (a tile center, a death etc.)
- */
-Robot.prototype.recordControlPoint = function (payload) {
-  if (payload.center) {   // Recording a center
-    this.controlPoints.push({ center: payload.center, direction: this.direction });
-    return;
-  }
-};
-
-
-
 

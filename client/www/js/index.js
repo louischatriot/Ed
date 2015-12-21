@@ -17,8 +17,6 @@ level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 
 
 var startTouch = function(e) {
-  console.log(e.keyCode);
-
   // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
   if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
 
@@ -44,6 +42,7 @@ var startTouch = function(e) {
     return;
   }
 
+  if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
 }
