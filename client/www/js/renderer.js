@@ -99,23 +99,9 @@ Renderer.prototype.drawSurrounding = function () {
 Renderer.prototype.drawRobot = function (robot, timeGap) {
   if (!robot.radius) { robot.radius = Renderer.robotRadius; }
 
-  // Jump animation
-  if (robot.jumping) {
-    if (robot.jumpingUp) {
-      if (robot.radius < Renderer.robotMaxJumpingRadius) {
-        robot.radius += timeGap * (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * 2 * robot.speed;
-      } else {
-        robot.jumpingUp = false;
-      }
-    } else {
-      if (robot.radius > Renderer.robotRadius) {
-        robot.radius -= timeGap * (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * 2 * robot.speed;
-      } else {
-        robot.radius = Renderer.robotRadius;
-        robot.jumping = false;
-        robot.jumpingUp = true;
-      }
-    }
+  if (robot.isJumping()) {
+    var jumpPercent = (Robot.jumpLength / 2 - Math.abs(robot.movementTo(robot.jumpStartedAt) - Robot.jumpLength / 2)) / (Robot.jumpLength / 2);
+    robot.radius = Renderer.robotRadius + (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * jumpPercent;
   }
 
   this.ctx.beginPath();

@@ -62,8 +62,7 @@ function Robot(tile, level, speed, isEnnemy) {
   this.y = tile.center().y;
   this.direction = Robot.directions.RIGHT;
 
-	this.jumping = false;
-  this.jumpingUp = true; // Each jump has two sequences. One up, one down.
+	this.jumpStartedAt = undefined;   // Position current jump was started
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 	this.speed = speed;
@@ -79,8 +78,9 @@ function Robot(tile, level, speed, isEnnemy) {
 
 Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
 
-// TODO: extenralize in config object
+// TODO: extenralize in config object, redundancy with renderer
 Robot.timeToRemember = 1500;   // In ms, how much history to remember for this robot
+Robot.jumpLength = 0.8;   // As percentage of tile length
 
 
 Robot.prototype.emit = function (evt, message) {
@@ -135,17 +135,31 @@ Robot.prototype.nextTile = function(_tile, _direction) {
 
 
 Robot.prototype.reposition = function(tile) {
-	this.x = tile.i + 1 / 2 ;
-	this.y = tile.j + 1 / 2 ;
-  this.jumping = false;
+	this.x = tile.center().x;
+	this.y = tile.center().y;
+  this.jumpStartedAt = undefined;
   this.direction = Robot.directions.RIGHT;
   this.direction = this.nextDirection();
 }
 
 
-Robot.prototype.startAJump = function(tile) {
-  this.jumping = true;
+// TODO: maybe implement jump cooldown
+Robot.prototype.startAJump = function() {
+  if (! this.isJumping()) {
+    this.jumpStartedAt = { x: this.x, y: this.y };
+  }
 }
+
+
+Robot.prototype.isJumping = function () {
+  if (this.jumpStartedAt === undefined) { return false; }
+  if (this.movementTo(this.jumpStartedAt) > Robot.jumpLength) {
+    this.jumpStartedAt = undefined;
+    return false;
+  } else {
+    return true;
+  }
+};
 
 
 Robot.prototype.distanceTo = function(anotherRobot) {
@@ -171,11 +185,6 @@ Robot.prototype.checkInterception = function() {
 }
 
 
-Robot.prototype.hitEnnemy = function() {
-  this.reposition(this.level.tileTable[0][0]);
-}
-
-
 /**
  * Get the next direction the robot can go to. Try first to keep the same direction (if no wall ahead or jumping)
  * Then try clockwise starting from the right of the current direction while avoiding to go in the opposite direction
@@ -191,7 +200,7 @@ Robot.prototype.nextDirection = function() {
   tileWalls[Robot.directions.DOWN] = this.getTile().downWall;
   tileWalls[Robot.directions.LEFT] = this.getTile().leftWall;
 
-  if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) {
+  if (this.isJumping() && tileWalls[this.direction] !== Tile.wallType.HARD) {
     return this.direction;
   }
 
@@ -208,7 +217,7 @@ Robot.prototype.nextDirection = function() {
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
  */
 Robot.prototype.updatePosition = function (timeGap) {
-  if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
+  if (! this.isEnnemy && this.checkInterception()) { return this.reposition(this.level.tileTable[0][0]); }
 
   var movement = timeGap * this.speed;
   if (movement === 0) { return; }
