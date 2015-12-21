@@ -9,7 +9,7 @@ function Level(tileTableWidth, tileTableHeight) {
   this.readyToJump = true;   // To prevent a keydown from continually making a player jump
   this.currentlyPlaying = true;   // Use to pause the game
 
-  this.ennemyDifficulty = 0.2;   // Higher means more ennemies will appear. Harder. Standard=0.1
+  this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow = 2;   // Number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
