@@ -228,12 +228,16 @@ Robot.prototype.updatePosition = function (timeGap) {
     var controlPoint, movementToPerform, staleControlPoint;
 
     while (movement > 0) {
-      // TODO: for now only center-type control points are used
       controlPoint = this.controlPoints.getLatest();
       staleControlPoint = this.movementTo(controlPoint.position) < movement;
       movementToPerform = Math.min(movement, this.movementTo(controlPoint.position));
       movement -= movementToPerform;
       this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
+
+      if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
+      if (controlPoint.jumpEnd) {
+        this.jumpStartedAt = Robot.translate(controlPoint.position, Robot.jumpLength, getOppositeDirection(controlPoint.direction));
+      }
 
       if (staleControlPoint) {
         this.controlPoints.staleLatest();
@@ -264,7 +268,7 @@ Robot.prototype.updatePosition = function (timeGap) {
       this.move(movementToPerform);
 
       if (registerControlPoint) {
-        controlPoint = { position: controlPointPosition, direction: this.direction };
+        controlPoint = { position: controlPointPosition };
         if (controlPointIsJump) {
           this.jumpStartedAt = undefined;
           controlPoint.jumpEnd = true;
@@ -272,6 +276,7 @@ Robot.prototype.updatePosition = function (timeGap) {
         } else {
           this.direction = this.nextDirection();
         }
+        controlPoint.direction = this.direction;
         this.controlPoints.push(controlPoint);
       }
     }
