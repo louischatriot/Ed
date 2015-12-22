@@ -102,6 +102,8 @@ Renderer.prototype.drawRobot = function (robot, timeGap) {
   if (robot.isJumping()) {
     var jumpPercent = (Robot.jumpLength / 2 - Math.abs(robot.movementTo(robot.jumpStartedAt) - Robot.jumpLength / 2)) / (Robot.jumpLength / 2);
     robot.radius = Renderer.robotRadius + (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * jumpPercent;
+  } else {
+    robot.radius = Renderer.robotRadius;
   }
 
   this.ctx.beginPath();

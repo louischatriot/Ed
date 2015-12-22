@@ -69,7 +69,7 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.isEnnemy = isEnnemy;
 
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
-  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 4;
+  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) * 3;
   this.controlPoints = new CyclicArray(nTilesToRemember);
   for (var i = 0; i < nTilesToRemember; i += 1) { this.controlPoints.push({ position: tile.center(), direction: this.direction }); }
 
@@ -218,7 +218,17 @@ Robot.prototype.nextDirection = function() {
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
  */
 Robot.prototype.updatePosition = function (timeGap) {
-  if (! this.isEnnemy && this.checkInterception()) { return this.reposition(this.level.tileTable[0][0]); }
+  // Get hit by ennemy: immediately stop jump and go back to start
+  if (! this.isEnnemy && this.checkInterception()) {
+    if (this.isJumping()) {
+      this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, jumpEnd: true, jumpStartedAt: this.jumpStartedAt });
+    }
+    this.jumpStartedAt = undefined;
+    this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, killedPosition: true });
+    this.reposition(this.level.tileTable[0][0]);
+    this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, justKilled: true });
+    return;
+  }
 
   var movement = timeGap * this.speed;
   if (movement === 0) { return; }
@@ -239,9 +249,10 @@ Robot.prototype.updatePosition = function (timeGap) {
         this.direction = this.controlPoints.getLatest().direction;
 
         if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
-        if (controlPoint.jumpEnd) {
-          this.jumpStartedAt = Robot.translate(controlPoint.position, Robot.jumpLength, getOppositeDirection(controlPoint.direction));
-        }
+        if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
+        if (controlPoint.justKilled) {
+          var killedPosition = this.controlPoints.pop().position;
+          this.x = killedPosition.x; this.y = killedPosition.y; }
       }
     }
   } else {   // Going forward in time
@@ -270,8 +281,9 @@ Robot.prototype.updatePosition = function (timeGap) {
       if (registerControlPoint) {
         controlPoint = { position: controlPointPosition };
         if (controlPointIsJump) {
-          this.jumpStartedAt = undefined;
           controlPoint.jumpEnd = true;
+          controlPoint.jumpStartedAt = this.jumpStartedAt;
+          this.jumpStartedAt = undefined;
           jumpEnd = undefined;
         } else {
           this.direction = this.nextDirection();
@@ -371,6 +383,7 @@ Robot.prototype.printControlPoints = function () {
     var msg = cp.position.x + ' - ' + cp.position.y + ' ; ' + cp.direction;
     if (cp.jumpStart) { msg += ' ; jump start'; }
     if (cp.jumpEnd) { msg += ' ; jump end'; }
+    if (cp.justKilled) { msg += ' ; just killed'; }
     console.log(msg);
   });
 };
