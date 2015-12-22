@@ -234,14 +234,14 @@ Robot.prototype.updatePosition = function (timeGap) {
       movement -= movementToPerform;
       this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
 
-      if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
-      if (controlPoint.jumpEnd) {
-        this.jumpStartedAt = Robot.translate(controlPoint.position, Robot.jumpLength, getOppositeDirection(controlPoint.direction));
-      }
-
       if (staleControlPoint) {
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
+
+        if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
+        if (controlPoint.jumpEnd) {
+          this.jumpStartedAt = Robot.translate(controlPoint.position, Robot.jumpLength, getOppositeDirection(controlPoint.direction));
+        }
       }
     }
   } else {   // Going forward in time
