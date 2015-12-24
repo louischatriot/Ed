@@ -42,7 +42,7 @@ var startTouch = function(e) {
     return;
   }
 
-  if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
+  //if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
 }
@@ -92,5 +92,5 @@ function pause () {
 
 
 
-//setInterval(main, 20);
 level.update(0);
+start();
