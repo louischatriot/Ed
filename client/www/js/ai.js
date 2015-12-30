@@ -7,16 +7,19 @@ function AI(level,robot) {
   this.AIDepth = 20; // the higher the depth, the better the AI, the slower the calculation. TODO: the depth is the number of tiles visited. It should really be the depth of the recursion, but this produces bad results. I'm not sure why
 }
 
+
 AI.prototype.on = function(evt, listener) {
   if (!this.listeners[evt]) { this.listeners[evt] = []; }
   this.listeners[evt].push(listener);
 };
+
 
 AI.prototype.emit = function (evt, message) {
   if (this.listeners[evt]) {
     this.listeners[evt].forEach(function (fn) { fn(message); });
   }
 };
+
 
 //on event
 AI.prototype.makeDecisionOnNextJump = function() {

@@ -1,15 +1,29 @@
 var renderer = new Renderer();
 
+var currentKyu = 25;
+
+if (localStorage.getItem('EdKyu')) {
+	currentKyu = JSON.parse(localStorage.getItem('EdKyu'));
+	currentKyu = 20;
+}
+else {
+	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
+}
+
+
 var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
+level.kyu = currentKyu;
 level.createNewLevel();
 p = level.addANewPlayer();
 
-//level.addANewPlayer();
-//var theAI = new AI(level,level.playerTable[1]);
+level.addANewPlayer();
+var theAI = new AI(level,level.playerTable[1]);
 
 
 // Remains to be seen: should we render a new frame every time the physics engine is updated?
 level.on('positions.updated', function () { renderer.drawNewFrame(level); });
+level.on('background.updated', function () { renderer.newBackground(); });
+
 
 // Should this next line be in the AI constructor?
 //level.playerTable[1].on('justPassedIntersection', function () { theAI.makeDecisionOnNextJump(); });
