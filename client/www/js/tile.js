@@ -45,6 +45,7 @@ Tile.prototype.removeEnnemiesFromCorridor = function(level) {
 }
 
 
+
 Tile.prototype.newType = function (type) {
 	this.type = type;
 }

@@ -319,3 +319,78 @@ Robot.prototype.recordControlPoint = function (payload) {
     return;
   }
 };
+
+
+
+/**
+ * Move robot by quantity movement in direction direction (defaulting to robot's current direction)
+ */
+Robot.prototype.move = function (movement, _direction) {
+  var direction = _direction || this.direction;
+
+  if (direction === Robot.directions.RIGHT) { this.x += movement; }
+  if (direction === Robot.directions.UP) { this.y -= movement; }
+  if (direction === Robot.directions.LEFT) { this.x -= movement; }
+  if (direction === Robot.directions.DOWN) { this.y += movement; }
+};
+
+
+/**
+ * Get tile containing point (_x, _y), by default where the Robot is Tile is inclusive of left and top walls, exclusive of right and down walls
+ * Return null if out of tile table
+ */
+Robot.prototype.getTile = function (_x, _y) {
+  var x = _x !== undefined ? _x : this.x
+    , y = _y !== undefined ? _y : this.y;
+
+  if (this.level.tileTable[Math.floor(x)] && this.level.tileTable[Math.floor(x)][Math.floor(y)]) {
+    return this.level.tileTable[Math.floor(x)][Math.floor(y)];
+  } else {
+    return null;
+  }
+};
+
+
+/**
+ * Get center Robot is moving towards
+ */
+Robot.prototype.getNextCenter = function () {
+  var x = this.x, y = this.y;
+  if (this.direction === Robot.directions.RIGHT) { x += 1 / 2; }
+  if (this.direction === Robot.directions.DOWN) { y += 1 / 2; }
+  if (this.direction === Robot.directions.UP) {
+    y -= 1 / 2;
+    if (y === Math.floor(y)) { y -= 0.01; }   // Tiles are exclusive of top border
+  }
+  if (this.direction === Robot.directions.LEFT) {
+    x -= 1 / 2;
+    if (x === Math.floor(x)) { x -= 0.01; }   // Tiles are exclusive of left border
+  }
+
+  return this.getTile(x, y).center();
+};
+
+
+/**
+ * Get movement needed from Robot to reach point
+ * Can be passed two coordinates or a point { x, y }
+ */
+Robot.prototype.movementTo = function (x, y) {
+  if (y === undefined) {
+    y = x.y;
+    x = x.x;
+  }
+
+  return Math.abs(this.x - x) + Math.abs(this.y - y);
+};
+
+
+/**
+ * Record a new control point (a tile center, a death etc.)
+ */
+Robot.prototype.recordControlPoint = function (payload) {
+  if (payload.center) {   // Recording a center
+    this.controlPoints.push({ center: payload.center, direction: this.direction });
+    return;
+  }
+};
