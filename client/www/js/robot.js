@@ -23,6 +23,14 @@ CyclicArray.prototype.getLatest = function () {
   return this.a[this.i];
 };
 
+// Nth from the beginning, latest being 0
+CyclicArray.prototype.getNth = function (_n) {
+  var n = this.i - _n;
+  if (n < 0) { n += this.size; }
+  if (this.stales[n]) { throw "Can't access stale element"; }
+  return this.a[n];
+};
+
 CyclicArray.prototype.staleLatest = function () {
   this.stales[this.i] = true;
   this.i -= 1;
@@ -33,6 +41,15 @@ CyclicArray.prototype.pop = function () {
   var elt = this.getLatest();
   this.staleLatest();
   return elt;
+};
+
+// Execute a function on all non stale elements, in reverse chronological order
+CyclicArray.prototype.reverseExecute = function (fn) {
+  for (var n = 0; n < this.size; n += 1) {
+    try {
+      fn(this.getNth(n));
+    } catch (e) {}   // Do nothing on error
+  }
 };
 
 
@@ -47,26 +64,30 @@ function Robot(tile, level, speed, isEnnemy) {
 
   this.kyu = 25; // How strong is this Robot?
 
-	this.jumping = false;
-  this.jumpingUp = true; // Each jump has two sequences. One up, one down.
+	//this.jumping = false;
+  //this.jumpingUp = true; // Each jump has two sequences. One up, one down.
+	this.jumpStartedAt = undefined;   // Position current jump was started
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
-  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 4;
+  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) * 3;
   this.controlPoints = new CyclicArray(nTilesToRemember);
-  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordControlPoint({ center: tile.center() }); }
+
+  for (var i = 0; i < nTilesToRemember; i += 1) { this.controlPoints.push({ position: tile.center(), direction: this.direction }); }
+
   this.listeners = {};
 
   this.alwaysTurnsRight = false; // enables maximal theoretical exploration
 }
 
-Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
 
-// TODO: extenralize in config object
-Robot.timeToRemember = 5000;   // In ms, how much history to remember for this robot
+// TODO: extenralize in config object, redundancy with renderer
+Robot.timeToRemember = 3500;   // In ms, how much history to remember for this robot
+Robot.jumpLength = 0.8;   // As percentage of tile length
 
 
 Robot.prototype.emit = function (evt, message) {
@@ -121,26 +142,40 @@ Robot.prototype.nextTile = function(_tile, _direction) {
 
 
 Robot.prototype.reposition = function(tile) {
-	this.x = tile.i + 1 / 2 ;
-	this.y = tile.j + 1 / 2 ;
-  this.jumping = false;
-  this.jumpingUp = true;
+	this.x = tile.center().x;
+	this.y = tile.center().y;
+  this.jumpStartedAt = undefined;
   this.direction = Robot.directions.RIGHT;
   this.direction = this.nextDirection();
 }
 
 
-Robot.prototype.startAJump = function(tile) {
-  this.jumping = true;
+// TODO: maybe implement jump cooldown
+Robot.prototype.startAJump = function() {
+  if (! this.isJumping()) {
+    this.jumpStartedAt = { x: this.x, y: this.y };
+    this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });
+  }
 }
+
+
+Robot.prototype.isJumping = function () {
+  if (this.jumpStartedAt === undefined) { return false; }
+  if (this.movementTo(this.jumpStartedAt) > Robot.jumpLength) {
+    this.jumpStartedAt = undefined;
+    return false;
+  } else {
+    return true;
+  }
+};
 
 
 Robot.prototype.distanceTo = function(anotherRobot) {
   return (this.x - anotherRobot.x) * (this.x - anotherRobot.x) + (this.y - anotherRobot.y) * (this.y - anotherRobot.y);
 }
 
-
 // optimized collision function
+
 Robot.prototype.collisionWith = function(anotherRobot) {
   var r = 2 / 5;
   if (Math.abs(anotherRobot.x - this.x) < r && Math.abs(anotherRobot.y - this.y) < r && this.distanceTo(anotherRobot) < r * r) {
@@ -164,6 +199,7 @@ Robot.prototype.hitEnnemy = function() {
 }
 
 
+
 /**
  * Get the next direction the robot can go to. Try first to keep the same direction (if no wall ahead or jumping)
  * Then try clockwise starting from the right of the current direction while avoiding to go in the opposite direction
@@ -179,7 +215,7 @@ Robot.prototype.nextDirection = function() {
   tileWalls[Robot.directions.DOWN] = this.getTile().downWall;
   tileWalls[Robot.directions.LEFT] = this.getTile().leftWall;
 
-  if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) {
+  if (this.isJumping() && tileWalls[this.direction] !== Tile.wallType.HARD) {
     return this.direction;
   }
 
@@ -199,7 +235,17 @@ Robot.prototype.nextDirection = function() {
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
  */
 Robot.prototype.updatePosition = function (timeGap) {
-  if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
+  // Get hit by ennemy: immediately stop jump and go back to start
+  if (! this.isEnnemy && this.checkInterception()) {
+    if (this.isJumping()) {
+      this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, jumpEnd: true, jumpStartedAt: this.jumpStartedAt });
+    }
+    this.jumpStartedAt = undefined;
+    this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, killedPosition: true });
+    this.reposition(this.level.tileTable[0][0]);
+    this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, justKilled: true });
+    return;
+  }
 
   var movement = timeGap * this.speed;
   if (movement === 0) { return; }
@@ -209,38 +255,65 @@ Robot.prototype.updatePosition = function (timeGap) {
     var controlPoint, movementToPerform, staleControlPoint;
 
     while (movement > 0) {
-      // TODO: for now only center-type control points are used
       controlPoint = this.controlPoints.getLatest();
-      staleControlPoint = this.movementTo(controlPoint.center) < movement;
-      movementToPerform = Math.min(movement, this.movementTo(controlPoint.center));
+      staleControlPoint = this.movementTo(controlPoint.position) < movement;
+      movementToPerform = Math.min(movement, this.movementTo(controlPoint.position));
       movement -= movementToPerform;
       this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
 
       if (staleControlPoint) {
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
+
+        if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
+        if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
+        if (controlPoint.justKilled) {
+          var killedPosition = this.controlPoints.pop().position;
+          this.x = killedPosition.x; this.y = killedPosition.y; }
       }
     }
 
   } else {   // Going forward in time
-    var nextCenter, movementToPerform, registerCenter = false;
+    var movementToPerform, registerControlPoint, controlPoint
+      , jumpEnd, remainingJump, controlPointPosition, controlPointIsJump;
 
     while (movement > 0) {
-      nextCenter = this.getNextCenter();
-      registerCenter = this.movementTo(nextCenter) <= movement;
-      movementToPerform = Math.min(movement, this.movementTo(nextCenter));
+      controlPointIsJump = false;
+      if (this.isJumping()) {
+        jumpEnd = { x: this.x, y: this.y };
+        remainingJump = Robot.jumpLength - this.movementTo(this.jumpStartedAt);
+        jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
+      }
+
+      controlPointPosition = this.getNextCenter();
+      if (jumpEnd && this.movementTo(jumpEnd) < this.movementTo(controlPointPosition)) {
+        controlPointPosition = jumpEnd;
+        controlPointIsJump = true;
+      }
+
+      registerControlPoint = this.movementTo(controlPointPosition) <= movement;
+      movementToPerform = Math.min(movement, this.movementTo(controlPointPosition));
       movement -= movementToPerform;
       this.move(movementToPerform);
 
-      if (registerCenter) {   // Just passed a center
-        this.direction = this.nextDirection();
-        this.recordControlPoint({ center: nextCenter });
-        /*if (this.tile.isObjective) { // TODO: Robots don't have tiles anymore.
-          //this.emit('won'); // TODO: currently doesn't seem to work.
-          this.level.nextDifficulty(); // won't need this once emit works.
-        }*/
+      if (registerControlPoint) {
+        controlPoint = { position: controlPointPosition };
+        if (controlPointIsJump) {
+          controlPoint.jumpEnd = true;
+          controlPoint.jumpStartedAt = this.jumpStartedAt;
+          this.jumpStartedAt = undefined;
+          jumpEnd = undefined;
+        } else {
+          this.direction = this.nextDirection();
+          /*if (this.tile.isObjective) { // TODO: Robots don't have tiles anymore.
+            //this.emit('won'); // TODO: currently doesn't seem to work.
+            this.level.nextDifficulty(); // won't need this once emit works.
+          }*/
 
-        this.emit('justPassedIntersection'); //send event for AI.
+          this.emit('justPassedIntersection'); //send event for AI.
+        }
+        controlPoint.direction = this.direction;
+        this.controlPoints.push(controlPoint);
       }
     }
   }
@@ -257,6 +330,22 @@ Robot.prototype.move = function (movement, _direction) {
   if (direction === Robot.directions.UP) { this.y -= movement; }
   if (direction === Robot.directions.LEFT) { this.x -= movement; }
   if (direction === Robot.directions.DOWN) { this.y += movement; }
+};
+
+
+/**
+ * Translate point by movement in direction direction
+ * Doesn't modifiy the point itself, creates a deep copy and returns it
+ */
+Robot.translate = function (point, movement, direction) {
+  var res = { x: point.x, y: point.y };
+
+  if (direction === Robot.directions.RIGHT) { res.x += movement; }
+  if (direction === Robot.directions.UP) { res.y -= movement; }
+  if (direction === Robot.directions.LEFT) { res.x -= movement; }
+  if (direction === Robot.directions.DOWN) { res.y += movement; }
+
+  return res;
 };
 
 
@@ -311,15 +400,17 @@ Robot.prototype.movementTo = function (x, y) {
 
 
 /**
- * Record a new control point (a tile center, a death etc.)
+ * For debugging
  */
-Robot.prototype.recordControlPoint = function (payload) {
-  if (payload.center) {   // Recording a center
-    this.controlPoints.push({ center: payload.center, direction: this.direction });
-    return;
-  }
+Robot.prototype.printControlPoints = function () {
+  this.controlPoints.reverseExecute(function (cp) {
+    var msg = cp.position.x + ' - ' + cp.position.y + ' ; ' + cp.direction;
+    if (cp.jumpStart) { msg += ' ; jump start'; }
+    if (cp.jumpEnd) { msg += ' ; jump end'; }
+    if (cp.justKilled) { msg += ' ; just killed'; }
+    console.log(msg);
+  });
 };
-
 
 
 /**
