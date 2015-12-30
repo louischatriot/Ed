@@ -1,9 +1,48 @@
+/**
+ * Cyclic array, all indices are cast to a range of the given size (between 0 and size - 1)
+ * this.i always points to the latest inserted element
+ */
+function CyclicArray (size) {
+  this.a = [];
+  this.i = size - 1;
+  this.size = size;
+
+  this.stales = [];
+  for (var i = 0; i < size; i += 1) { this.stales[i] = true; }
+}
+
+CyclicArray.prototype.push = function (elt) {
+  this.i += 1;
+  if (this.i >= this.size) { this.i -= this.size; }
+  this.a[this.i] = elt;
+  this.stales[this.i] = false;
+};
+
+CyclicArray.prototype.getLatest = function () {
+  if (this.stales[this.i]) { throw "Can't access stale element"; }
+  return this.a[this.i];
+};
+
+CyclicArray.prototype.staleLatest = function () {
+  this.stales[this.i] = true;
+  this.i -= 1;
+  if (this.i < 0) { this.i += this.size; }
+};
+
+CyclicArray.prototype.pop = function () {
+  var elt = this.getLatest();
+  this.staleLatest();
+  return elt;
+};
+
+
+/**
+ * Robot (can be player or an ennemy)
+ */
 function Robot(tile, level, speed, isEnnemy) {
   this.level = level; // The level the Robot is currently playing in
-  this.tile = tile;
-  this.distanceToNextTile = 1; // The distance between the Robot and the next Tile. Decreases with time.
-  this.x = tile.x;
-  this.y = tile.y;
+  this.x = tile.center().x;
+  this.y = tile.center().y;
   this.direction = Robot.directions.RIGHT;
 
   this.kyu = 25; // How strong is this Robot?
@@ -14,12 +53,20 @@ function Robot(tile, level, speed, isEnnemy) {
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
+
+  // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
+  var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) + 4;
+  this.controlPoints = new CyclicArray(nTilesToRemember);
+  for (var i = 0; i < nTilesToRemember; i += 1) { this.recordControlPoint({ center: tile.center() }); }
   this.listeners = {};
 
   this.alwaysTurnsRight = false; // enables maximal theoretical exploration
 }
 
 Robot.directions = { RIGHT: 0, UP: 1, LEFT: 2, DOWN: 3 }
+
+// TODO: extenralize in config object
+Robot.timeToRemember = 5000;   // In ms, how much history to remember for this robot
 
 
 Robot.prototype.emit = function (evt, message) {
@@ -36,8 +83,6 @@ Robot.prototype.on = function(evt, listener) {
 
 Robot.prototype.cloneFrom = function(anotherRobot) {
   this.level = anotherRobot.level;
-  this.tile = anotherRobot.tile;
-  this.distanceToNextTile = anotherRobot.distanceToNextTile;
   this.x = anotherRobot.x;
   this.y = anotherRobot.y;
   this.speed = anotherRobot.speed;
@@ -55,16 +100,29 @@ function getOppositeDirection (direction) {
 }
 
 
-Robot.prototype.nextTile = function() {
-  return nextTile(this.tile, this.direction);
+
+Robot.prototype.nextTile = function(_tile, _direction) {
+  var tile = _tile || this.getTile()
+    , direction = _direction || this.direction
+    ;
+
+  if (!tile) { return null; }
+
+  var i = tile.i;
+  var j = tile.j;
+  if (direction == Robot.directions.RIGHT && i < this.level.tileTableWidth - 1) { return this.level.tileTable[i + 1][j]; }
+  if (direction == Robot.directions.LEFT && i > 0) { return this.level.tileTable[i - 1][j]; }
+  if (direction == Robot.directions.UP && j > 0) { return this.level.tileTable[i][j - 1]; }
+  if (direction == Robot.directions.DOWN && j < this.level.tileTableHeight - 1) { return this.level.tileTable[i][j + 1]; }
+
+  // No tile found, return null
+  return null;
 }
 
 
 Robot.prototype.reposition = function(tile) {
-  this.tile = tile;
 	this.x = tile.i + 1 / 2 ;
 	this.y = tile.j + 1 / 2 ;
-	this.distanceToNextTile = 1;
   this.jumping = false;
   this.jumpingUp = true;
   this.direction = Robot.directions.RIGHT;
@@ -114,11 +172,12 @@ Robot.prototype.hitEnnemy = function() {
 Robot.prototype.nextDirection = function() {
   var dirSequence = [Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT, Robot.directions.UP, Robot.directions.RIGHT, Robot.directions.DOWN, Robot.directions.LEFT]
     , tileWalls = {};
+
   // TODO: this is of course not satisfying, we should use the same structure for indexing tile walls
-  tileWalls[Robot.directions.UP] = this.tile.upWall;
-  tileWalls[Robot.directions.RIGHT] = this.tile.rightWall;
-  tileWalls[Robot.directions.DOWN] = this.tile.downWall;
-  tileWalls[Robot.directions.LEFT] = this.tile.leftWall;
+  tileWalls[Robot.directions.UP] = this.getTile().upWall;
+  tileWalls[Robot.directions.RIGHT] = this.getTile().rightWall;
+  tileWalls[Robot.directions.DOWN] = this.getTile().downWall;
+  tileWalls[Robot.directions.LEFT] = this.getTile().leftWall;
 
   if (this.jumping && tileWalls[this.direction] !== Tile.wallType.HARD) {
     return this.direction;
@@ -136,49 +195,127 @@ Robot.prototype.nextDirection = function() {
 
 
 /**
- * Update position and animate robot (name is probably not well chosen ...)
- * Called at every loop
- * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated
+ * Update position
+ * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
  */
-Robot.prototype.updatePosition = function(timeGap) {
-  if (!this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
+Robot.prototype.updatePosition = function (timeGap) {
+  if (! this.isEnnemy && this.checkInterception()) { return this.hitEnnemy(); }
 
   var movement = timeGap * this.speed;
-  if (movement < this.distanceToNextTile) {
-    // Keep going in the same direction
-    this.distanceToNextTile -= movement;
-    if (this.direction === Robot.directions.RIGHT) this.x += movement;
-    if (this.direction === Robot.directions.UP) this.y -= movement;
-    if (this.direction === Robot.directions.LEFT) this.x -= movement;
-    if (this.direction === Robot.directions.DOWN) this.y += movement;
-  } else {
-    // Going by an intersection
-    var next = this.nextTile();
+  if (movement === 0) { return; }
 
-    if (this.isEnnemy) {
-      next.nearbyEnnemies.push(this);
-      var index  =  this.tile.nearbyEnnemies.indexOf(this);
-      if (index > -1) {
-        this.tile.nearbyEnnemies.splice(index,1);
+  if (movement < 0) {   // Going back in time
+    movement = -movement;
+    var controlPoint, movementToPerform, staleControlPoint;
+
+    while (movement > 0) {
+      // TODO: for now only center-type control points are used
+      controlPoint = this.controlPoints.getLatest();
+      staleControlPoint = this.movementTo(controlPoint.center) < movement;
+      movementToPerform = Math.min(movement, this.movementTo(controlPoint.center));
+      movement -= movementToPerform;
+      this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
+
+      if (staleControlPoint) {
+        this.controlPoints.staleLatest();
+        this.direction = this.controlPoints.getLatest().direction;
       }
     }
 
-    this.tile = next;
-    this.direction  =  this.nextDirection();
-    var movementLeft = movement - this.distanceToNextTile;
-    this.distanceToNextTile = 1 - movementLeft;
-    if (this.direction === Robot.directions.RIGHT) this.x = this.tile.x + movementLeft;
-    if (this.direction === Robot.directions.UP) this.y = this.tile.y - movementLeft;
-    if (this.direction === Robot.directions.LEFT) this.x = this.tile.x - movementLeft;
-    if (this.direction === Robot.directions.DOWN) this.y = this.tile.y + movementLeft;
+  } else {   // Going forward in time
+    var nextCenter, movementToPerform, registerCenter = false;
 
-    if (this.tile.isObjective) {
-      //this.emit('won'); // TODO: currently doesn't seem to work.
-      this.level.nextDifficulty(); // won't need this once emit works.
+    while (movement > 0) {
+      nextCenter = this.getNextCenter();
+      registerCenter = this.movementTo(nextCenter) <= movement;
+      movementToPerform = Math.min(movement, this.movementTo(nextCenter));
+      movement -= movementToPerform;
+      this.move(movementToPerform);
+
+      if (registerCenter) {   // Just passed a center
+        this.direction = this.nextDirection();
+        this.recordControlPoint({ center: nextCenter });
+        /*if (this.tile.isObjective) { // TODO: Robots don't have tiles anymore.
+          //this.emit('won'); // TODO: currently doesn't seem to work.
+          this.level.nextDifficulty(); // won't need this once emit works.
+        }*/
+
+        this.emit('justPassedIntersection'); //send event for AI.
+      }
     }
-
-    this.emit('justPassedIntersection'); //send event for AI.
-
-
-    }
+  }
 }
+
+
+/**
+ * Move robot by quantity movement in direction direction (defaulting to robot's current direction)
+ */
+Robot.prototype.move = function (movement, _direction) {
+  var direction = _direction || this.direction;
+
+  if (direction === Robot.directions.RIGHT) { this.x += movement; }
+  if (direction === Robot.directions.UP) { this.y -= movement; }
+  if (direction === Robot.directions.LEFT) { this.x -= movement; }
+  if (direction === Robot.directions.DOWN) { this.y += movement; }
+};
+
+
+/**
+ * Get tile containing point (_x, _y), by default where the Robot is Tile is inclusive of left and top walls, exclusive of right and down walls
+ * Return null if out of tile table
+ */
+Robot.prototype.getTile = function (_x, _y) {
+  var x = _x !== undefined ? _x : this.x
+    , y = _y !== undefined ? _y : this.y;
+
+  if (this.level.tileTable[Math.floor(x)] && this.level.tileTable[Math.floor(x)][Math.floor(y)]) {
+    return this.level.tileTable[Math.floor(x)][Math.floor(y)];
+  } else {
+    return null;
+  }
+};
+
+
+/**
+ * Get center Robot is moving towards
+ */
+Robot.prototype.getNextCenter = function () {
+  var x = this.x, y = this.y;
+  if (this.direction === Robot.directions.RIGHT) { x += 1 / 2; }
+  if (this.direction === Robot.directions.DOWN) { y += 1 / 2; }
+  if (this.direction === Robot.directions.UP) {
+    y -= 1 / 2;
+    if (y === Math.floor(y)) { y -= 0.01; }   // Tiles are exclusive of top border
+  }
+  if (this.direction === Robot.directions.LEFT) {
+    x -= 1 / 2;
+    if (x === Math.floor(x)) { x -= 0.01; }   // Tiles are exclusive of left border
+  }
+
+  return this.getTile(x, y).center();
+};
+
+
+/**
+ * Get movement needed from Robot to reach point
+ * Can be passed two coordinates or a point { x, y }
+ */
+Robot.prototype.movementTo = function (x, y) {
+  if (y === undefined) {
+    y = x.y;
+    x = x.x;
+  }
+
+  return Math.abs(this.x - x) + Math.abs(this.y - y);
+};
+
+
+/**
+ * Record a new control point (a tile center, a death etc.)
+ */
+Robot.prototype.recordControlPoint = function (payload) {
+  if (payload.center) {   // Recording a center
+    this.controlPoints.push({ center: payload.center, direction: this.direction });
+    return;
+  }
+};

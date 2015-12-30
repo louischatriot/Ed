@@ -77,7 +77,6 @@ Renderer.prototype.backToBackground = function (tileTable) {
   }
 };
 
-
 /**
  * Draws a black frame around the maze. Purely esthetics.
  */

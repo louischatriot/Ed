@@ -14,7 +14,7 @@ else {
 var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
 level.kyu = currentKyu;
 level.createNewLevel();
-level.addANewPlayer();
+p = level.addANewPlayer();
 
 level.addANewPlayer();
 var theAI = new AI(level,level.playerTable[1]);
@@ -31,6 +31,33 @@ level.on('background.updated', function () { renderer.newBackground(); });
 
 
 var startTouch = function(e) {
+  console.log(e.keyCode);
+
+  // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
+  if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
+
+  // Start/pause
+  if (e.keyCode === 27) {
+    if (intervalId !== undefined) { pause(); } else { start(); }
+    return;
+  }
+
+  // Go back in time
+  if (e.keyCode === 13) {
+    timeDirection *= -1;
+    return;
+  }
+
+  // Increase/decrease speed
+  if (e.keyCode === 38) {
+    speedBoost *= 1.1;
+    return;
+  }
+  if (e.keyCode === 40) {
+    speedBoost /= 1.1;
+    return;
+  }
+
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
 }
@@ -52,9 +79,33 @@ document.ontouchstart = startTouch;
 document.ontouchend = endTouch;
 
 
-var main = function () {
-	level.update();
-};
+/**
+ * Main loop
+ */
+var lastTime
+  , intervalId = undefined
+  , timeDirection = 1
+  , speedBoost = 1
+  ;
+
+function main () {
+  var newTime = Date.now();
+  var timeGap = (newTime - lastTime);
+  lastTime = newTime;
+	level.update(speedBoost * timeDirection * timeGap);
+}
+
+function start () {
+  lastTime = Date.now();
+  intervalId = setInterval(main, 20);
+}
+
+function pause () {
+  clearInterval(intervalId);
+  intervalId = undefined;
+}
 
 
-setInterval(main, 20);
+
+//setInterval(main, 20);
+level.update(0);
