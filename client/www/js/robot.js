@@ -62,7 +62,7 @@ function Robot(tile, level, speed, isEnnemy) {
   this.y = tile.center().y;
   this.direction = Robot.directions.RIGHT;
 
-  this.kyu = 25; // How strong is this Robot?
+  this.kyu = 25; // How strong is this Robot? Probably should be in AI or in player's info.
 
 	//this.jumping = false;
   //this.jumpingUp = true; // Each jump has two sequences. One up, one down.
@@ -121,7 +121,6 @@ function getOppositeDirection (direction) {
 }
 
 
-
 Robot.prototype.nextTile = function(_tile, _direction) {
   var tile = _tile || this.getTile()
     , direction = _direction || this.direction
@@ -159,15 +158,9 @@ Robot.prototype.startAJump = function() {
 }
 
 
-Robot.prototype.isJumping = function () {
-  if (this.jumpStartedAt === undefined) { return false; }
-  if (this.movementTo(this.jumpStartedAt) > Robot.jumpLength) {
-    this.jumpStartedAt = undefined;
-    return false;
-  } else {
-    return true;
-  }
-};
+Robot.prototype.isJumping = function() {
+  return this.analyzeJump().isJumping;
+}
 
 
 Robot.prototype.distanceTo = function(anotherRobot) {
@@ -230,6 +223,32 @@ Robot.prototype.nextDirection = function() {
 }
 
 
+Robot.prototype.analyzeJump = function() {
+  var distance = 0;
+  var jumping = false;
+  var lastPoint = this;
+  var n = 0;
+  var keepLooping = true;
+  var controlPoint;
+  while (keepLooping) {
+    if (this.controlPoints && this.controlPoints.getNth(n)) {
+      controlPoint = this.controlPoints.getNth(n);
+      distance += absDistance(controlPoint.position,lastPoint);
+      lastPoint = controlPoint.position;
+      if (controlPoint.jumpStart) {
+        if (distance < Robot.jumpLength) { return {isJumping: true, distanceSinceStart: distance}; }
+        else { keepLooping = false;}
+      }
+      if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { keepLooping = false; }
+      n++;
+    }
+    else { keepLooping = false; }
+  }
+  return {isJumping: false, distanceSinceStart: 0};
+}
+
+
+
 /**
  * Update position
  * @param {Number} timeGap Number of milliseconds ellapsed since robot was last updated, can be negative to move backwards in time
@@ -265,8 +284,8 @@ Robot.prototype.updatePosition = function (timeGap) {
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
 
-        if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
-        if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
+        //if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
+        //if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
         if (controlPoint.justKilled) {
           var killedPosition = this.controlPoints.pop().position;
           this.x = killedPosition.x; this.y = killedPosition.y; }
@@ -279,9 +298,10 @@ Robot.prototype.updatePosition = function (timeGap) {
 
     while (movement > 0) {
       controlPointIsJump = false;
-      if (this.isJumping()) {
+      var jump = this.analyzeJump();
+      if (jump.isJumping) {
         jumpEnd = { x: this.x, y: this.y };
-        remainingJump = Robot.jumpLength - this.movementTo(this.jumpStartedAt);
+        remainingJump = Robot.jumpLength - jump.distanceSinceStart;
         jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
       }
 
@@ -471,9 +491,13 @@ Robot.prototype.movementTo = function (x, y) {
     y = x.y;
     x = x.x;
   }
-
   return Math.abs(this.x - x) + Math.abs(this.y - y);
 };
+
+
+var absDistance = function(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
 
 
 /**
