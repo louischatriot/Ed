@@ -15,6 +15,16 @@ function Tile(i, j, k) {
 Tile.wallType = { NOWALL: 0, SOFT: 1, HARD: 2 }
 
 
+Tile.prototype.hasEnnemy = function(ennemyTable) {
+	for (var n = 0; n < ennemyTable.length; n++) {
+		if (Math.floor(ennemyTable[n].x) === this.i && Math.floor(ennemyTable[n].y) === this.j) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 Tile.prototype.makeInnaccessible = function(level) {
 	this.upWall = Tile.wallType.HARD;
 	this.downWall = Tile.wallType.HARD;

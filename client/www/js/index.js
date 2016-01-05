@@ -14,10 +14,69 @@ else {
 var level = new Level(renderer.tileTableWidth, renderer.tileTableHeight);
 level.kyu = currentKyu;
 level.createNewLevel();
-p = level.addANewPlayer();
 
 //level.addANewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
+
+
+// transform a level into a table with the minimum amount of information
+
+var levelToString = function(level) {
+	var tableResult = new Array();
+	tableResult.push(level.tileTableWidth);
+	tableResult.push(level.tileTableHeight);
+	for (var i = 0; i < level.tileTableWidth; i++) {
+		for (var j = 0; j < level.tileTableHeight; j++) {
+			pushTile(tableResult,level.tileTable[i][j],level);
+		}
+	}
+	return JSON.stringify(tableResult);;
+}
+
+var stringToLevel = function(string) {
+	var table = JSON.parse(string);
+	var level = new Level(table[0], table[1]);
+	level.reset();
+	var i, j, k, tile;
+	for (var n = 2; n < table.length; n = n + 7) {
+		k = (n - 2) / 7;
+		i = Math.floor(k / level.tileTableHeight);
+		j = k % level.tileTableHeight;
+		tile = level.tileTable[i][j];
+		tile.newType(table[n]);
+		tile.upWall = table[n+1];
+		tile.downWall = table[n+2];
+		tile.rightWall = table[n+3];
+		tile.leftWall = table[n+4];
+		tile.isObjective = (table[n+5] === 1);
+		if (table[n+6] === 1) { // Add an ennemy on this tile
+			var ennemy = new Robot(tile, level, level.ennemySpeed, true);
+			level.ennemyTable.push(ennemy);
+			tile.nearbyEnnemies.push(ennemy);
+		}
+	}
+	level.updateStartingTile();
+	level.updateObjectiveTile();
+	return level;
+}
+
+
+var pushTile = function(table, tile, level) {
+	table.push(tile.type);
+	table.push(tile.upWall);
+	table.push(tile.downWall);
+	table.push(tile.rightWall);
+	table.push(tile.leftWall);
+	if (tile.isObjective) { table.push(1); } else { table.push(0); }
+	if (tile.hasEnnemy(level.ennemyTable)) { table.push(1); } else { table.push(0); }
+}
+
+
+var string = levelToString(level);
+console.log(string);
+level = stringToLevel(string);
+
+p = level.addANewPlayer();
 
 
 // Remains to be seen: should we render a new frame every time the physics engine is updated?

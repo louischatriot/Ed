@@ -106,25 +106,12 @@ Renderer.prototype.drawRobot = function (robot, timeGap) {
   if (!robot.radius) { robot.radius = Renderer.robotRadius; }
 
   var jump = robot.analyzeJump();
-  console.log(jump.isJumping);
   if (jump.isJumping) {
     var jumpPercent = (Robot.jumpLength / 2 - Math.abs(jump.distanceSinceStart - Robot.jumpLength / 2)) / (Robot.jumpLength / 2);
     robot.radius = Renderer.robotRadius + (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * jumpPercent;
   } else {
     robot.radius = Renderer.robotRadius;
   }
-
-  /*
-  var jump = robot.analyzeJump();
-  if (robot.isJumping()) {
-    var jumpPercent = (Robot.jumpLength / 2 - Math.abs(robot.movementTo(robot.jumpStartedAt) - Robot.jumpLength / 2)) / (Robot.jumpLength / 2);
-    robot.radius = Renderer.robotRadius + (Renderer.robotMaxJumpingRadius - Renderer.robotRadius) * jumpPercent;
-  } else {
-    robot.radius = Renderer.robotRadius;
-  }
-  */
-
-
   this.ctx.beginPath();
   this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
   this.ctx.fillStyle = robot.isEnnemy ? Renderer.ennemyColor : Renderer.robotColor;
