@@ -228,7 +228,7 @@ Robot.prototype.analyzeJump = function () {
     , controlPoint;
 
   while (controlPoint = this.controlPoints.getNth(n)) {
-    distance += absDistance(controlPoint.position,lastPoint);
+    distance += absDistance(controlPoint.position, lastPoint);
     lastPoint = controlPoint.position;
     if (controlPoint.jumpStart) {
       if (distance < Robot.jumpLength) {
