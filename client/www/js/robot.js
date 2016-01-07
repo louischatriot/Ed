@@ -64,8 +64,6 @@ function Robot(tile, level, speed, isEnnemy) {
 
   this.kyu = 25; // How strong is this Robot? Probably should be in AI or in player's info.
 
-	//this.jumping = false;
-  //this.jumpingUp = true; // Each jump has two sequences. One up, one down.
 	this.jumpStartedAt = undefined;   // Position current jump was started
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
@@ -75,7 +73,6 @@ function Robot(tile, level, speed, isEnnemy) {
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
   var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) * 3;
   this.controlPoints = new CyclicArray(nTilesToRemember);
-
   for (var i = 0; i < nTilesToRemember; i += 1) { this.controlPoints.push({ position: tile.center(), direction: this.direction }); }
 
   this.listeners = {};
@@ -159,7 +156,7 @@ Robot.prototype.startAJump = function() {
 
 
 Robot.prototype.isJumping = function() {
-  return this.analyzeJump().isJumping;
+  return this.controlPoints ? this.analyzeJump().isJumping : false;
 }
 
 
@@ -223,27 +220,27 @@ Robot.prototype.nextDirection = function() {
 }
 
 
-Robot.prototype.analyzeJump = function() {
-  var distance = 0;
-  var jumping = false;
-  var lastPoint = this;
-  var n = 0;
-  var keepLooping = true;
-  var controlPoint;
-  while (keepLooping) {
-    if (this.controlPoints && this.controlPoints.getNth(n)) {
-      controlPoint = this.controlPoints.getNth(n);
-      distance += absDistance(controlPoint.position,lastPoint);
-      lastPoint = controlPoint.position;
-      if (controlPoint.jumpStart) {
-        if (distance < Robot.jumpLength) { return {isJumping: true, distanceSinceStart: distance}; }
-        else { keepLooping = false;}
+Robot.prototype.analyzeJump = function () {
+  var distance = 0
+    , jumping = false
+    , lastPoint = this
+    , n = 0
+    , controlPoint;
+
+  while (controlPoint = this.controlPoints.getNth(n)) {
+    distance += absDistance(controlPoint.position,lastPoint);
+    lastPoint = controlPoint.position;
+    if (controlPoint.jumpStart) {
+      if (distance < Robot.jumpLength) {
+        return {isJumping: true, distanceSinceStart: distance};
+      } else {
+        break;
       }
-      if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { keepLooping = false; }
-      n++;
     }
-    else { keepLooping = false; }
+    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { break; }
+    n++;
   }
+
   return {isJumping: false, distanceSinceStart: 0};
 }
 
@@ -500,12 +497,3 @@ var absDistance = function(a, b) {
 }
 
 
-/**
- * Record a new control point (a tile center, a death etc.)
- */
-Robot.prototype.recordControlPoint = function (payload) {
-  if (payload.center) {   // Recording a center
-    this.controlPoints.push({ center: payload.center, direction: this.direction });
-    return;
-  }
-};
