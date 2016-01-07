@@ -231,12 +231,12 @@ Robot.prototype.analyzeJump = function () {
     lastPoint = controlPoint.position;
     if (controlPoint.jumpStart) {
       if (distance < Robot.jumpLength) {
-        return {isJumping: true, distanceSinceStart: distance};
+        return { isJumping: true, distanceSinceStart: distance };
       } else {
         break;
       }
     }
-    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { break; }
+    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled || controlPoint.jumpEnd) { break; }
     n++;
   }
 
@@ -290,36 +290,31 @@ Robot.prototype.updatePosition = function (timeGap) {
 
   } else {   // Going forward in time
     var movementToPerform, registerControlPoint, controlPoint
-      , jumpEnd, remainingJump, controlPointPosition, controlPointIsJump;
+      , jumpEnd, remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
 
     while (movement > 0) {
-      controlPointIsJump = false;
       var jump = this.analyzeJump();
-      if (jump.isJumping) {
-        jumpEnd = { x: this.x, y: this.y };
-        remainingJump = Robot.jumpLength - jump.distanceSinceStart;
-        jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
-      }
+      if (jump.isJumping) { remainingJump = Robot.jumpLength - jump.distanceSinceStart; }
 
-      controlPointPosition = this.getNextCenter();
-      if (jumpEnd && this.movementTo(jumpEnd) < this.movementTo(controlPointPosition)) {
-        controlPointPosition = jumpEnd;
-        controlPointIsJump = true;
-      }
+      nextCenterPosition = this.getNextCenter();
+      distanceToNextCenter = this.movementTo(nextCenterPosition);
+      registerControlPoint = (movement >= distanceToNextCenter) || (jump.isJumping && movement >= remainingJump);
 
-      registerControlPoint = this.movementTo(controlPointPosition) <= movement;
-      movementToPerform = Math.min(movement, this.movementTo(controlPointPosition));
+      movementToPerform = Math.min(movement, distanceToNextCenter);
+      if (jump.isJumping) { movementToPerform = Math.min(movementToPerform, remainingJump); }
       movement -= movementToPerform;
       this.move(movementToPerform);
 
       if (registerControlPoint) {
-        controlPoint = { position: controlPointPosition };
-        if (controlPointIsJump) {
+        controlPoint = {};
+        if (jump.isJumping && remainingJump <= distanceToNextCenter) {
+          jumpEnd = { x: this.x, y: this.y };
+          jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
+          controlPoint.position = jumpEnd;
           controlPoint.jumpEnd = true;
           controlPoint.jumpStartedAt = this.jumpStartedAt;
-          this.jumpStartedAt = undefined;
-          jumpEnd = undefined;
         } else {
+          controlPoint.position = nextCenterPosition;
           this.direction = this.nextDirection();
           /*if (this.tile.isObjective) { // TODO: Robots don't have tiles anymore.
             //this.emit('won'); // TODO: currently doesn't seem to work.

@@ -23,7 +23,6 @@ level.createNewLevel();
 
 
 var string = level.serialize();
-console.log(string);
 level = new Level({serializedVersion: string});
 
 p = level.addANewPlayer();
