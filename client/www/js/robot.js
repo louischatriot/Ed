@@ -222,7 +222,6 @@ Robot.prototype.nextDirection = function() {
 
 Robot.prototype.analyzeJump = function () {
   var distance = 0
-    , jumping = false
     , lastPoint = this
     , n = 0
     , controlPoint;
