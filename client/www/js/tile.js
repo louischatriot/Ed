@@ -9,12 +9,41 @@ function Tile(i, j, k) {
 	this.downWall = 1;
 	this.nearbyEnnemies = new Array(); // used to optimize collision detection. Each tile remembers the ennemies that are nearby
 	this.isObjective = false; // A robot will win the level when he reaches this tile.
+
 }
 
 
 Tile.wallType = { NOWALL: 0, SOFT: 1, HARD: 2 }
 
 
+Tile.prototype.serialize = function() {
+	return JSON.stringify({type: this.type, upWall: this.upWall, downWall: this.downWall, rightWall: this.rightWall, leftWall: this.leftWall, isObjective: this.objective});
+}
+
+Tile.prototype.deserialize = function(string) {
+	var obj = JSON.parse(string);
+	this.type = obj.type; // 0 means is hasn't been filled by a corridor yet. 1 means it's inaccessible. All tiles in the same corridor have the same type.
+	this.upWall = obj.upWall;
+	this.rightWall = obj.rightWall;
+	this.leftWall = obj.leftWall;
+	this.downWall = obj.downWall;
+	this.isObjective = obj.isObjective;
+}
+
+
+//delete this when done serializing
+/*
+Tile.prototype.pushTile = function(table, level) {
+	table.push(this.type);
+	table.push(this.upWall);
+	table.push(this.downWall);
+	table.push(this.rightWall);
+	table.push(this.leftWall);
+	if (this.isObjective) { table.push(1); } else { table.push(0); }
+	if (this.hasEnnemy(level.ennemyTable)) { table.push(1); } else { table.push(0); }
+}
+
+/*
 Tile.prototype.hasEnnemy = function(ennemyTable) {
 	for (var n = 0; n < ennemyTable.length; n++) {
 		if (Math.floor(ennemyTable[n].x) === this.i && Math.floor(ennemyTable[n].y) === this.j) {
@@ -23,7 +52,7 @@ Tile.prototype.hasEnnemy = function(ennemyTable) {
 	}
 	return false;
 }
-
+*/
 
 Tile.prototype.makeInnaccessible = function(level) {
 	this.upWall = Tile.wallType.HARD;

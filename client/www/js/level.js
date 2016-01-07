@@ -1,6 +1,6 @@
-function Level(tileTableWidth, tileTableHeight) {
-  this.tileTableHeight = tileTableHeight;
-  this.tileTableWidth = tileTableWidth;
+function Level(_opts) {
+  this.tileTableHeight = 0;
+  this.tileTableWidth = 0;
   this.tileTable = new Array();
   this.playerTable = new Array();
   this.ennemyTable = new Array();
@@ -21,7 +21,69 @@ function Level(tileTableWidth, tileTableHeight) {
   this.kyu = 25;
 
   this.listeners = {};
+
+  var opts = _opts || {};
+
+  if (opts.tileTableWidth) { this.tileTableWidth = opts.tileTableWidth; }
+  if (opts.tileTableHeight) { this.tileTableHeight = opts.tileTableHeight; }
+  if (opts.serializedVersion) { this.deserialize(opts.serializedVersion); }
 }
+
+
+Level.prototype.deserialize = function(string) {
+  var obj = JSON.parse(string);
+  this.tileTableWidth = obj.tileTableWidth;
+  this.tileTableHeight = obj.tileTableHeight;
+  this.reset();
+  for (var i = 0; i < this.tileTableWidth; i++) {
+    for (var j = 0; j < this.tileTableHeight; j++) {
+      this.tileTable[i][j].deserialize(obj.tileTable[i][j].tile);
+      if (obj.tileTable[i][j].ennemy) {
+        var ennemy = new Robot(this.tileTable[i][j], this, this.ennemySpeed, true);
+        this.ennemyTable.push(ennemy);
+        this.tileTable[i][j].nearbyEnnemies.push(ennemy);
+      }
+    }
+  }
+  this.updateStartingTile();
+  this.updateObjectiveTile();
+}
+
+
+Level.prototype.serialize = function() {
+	var serialTileTable = new Array();
+	for (var i = 0; i < this.tileTableWidth; i++) {
+    serialTileTable[i] = new Array();
+		for (var j = 0; j < this.tileTableHeight; j++) {
+      serialTileTable[i][j] = {tile: this.tileTable[i][j].serialize(), ennemy: this.tileHasEnnemy(this.tileTable[i][j])};
+		}
+	}
+	return JSON.stringify({tileTableHeight: this.tileTableHeight, tileTableWidth: this.tileTableWidth, tileTable: serialTileTable});
+}
+/*
+Level.prototype.serialize = function() {
+	var tableResult = new Array();
+	tableResult.push(this.tileTableWidth);
+	tableResult.push(this.tileTableHeight);
+	for (var i = 0; i < this.tileTableWidth; i++) {
+		for (var j = 0; j < this.tileTableHeight; j++) {
+			this.tileTable[i][j].pushTile(tableResult,this);
+		}
+	}
+	return JSON.stringify(tableResult);;
+}
+*/
+
+
+Level.prototype.tileHasEnnemy = function(tile) {
+	for (var n = 0; n < this.ennemyTable.length; n++) {
+		if (Math.floor(this.ennemyTable[n].x) === tile.i && Math.floor(this.ennemyTable[n].y) === tile.j) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 // TODO: externalize in a config object
 Level.maxTimeGapStep = 20;   // In ms, the maximum time gap with which level.update can ba called.
@@ -39,6 +101,7 @@ Level.prototype.on = function(evt, listener) {
 Level.prototype.removeEnnemiesFromTheEnd = function() {
   //maybe this should go inside the code that creates the end.
 }
+
 
 
 Level.prototype.emit = function (evt, message) {
