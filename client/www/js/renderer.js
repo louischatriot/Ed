@@ -34,6 +34,10 @@ function Renderer () {
   this.tileTableWidth = Math.floor(this.canvas.width / this.tileSize);
   this.tileTableHeight = Math.floor(this.canvas.height / this.tileSize);
 
+  this.tileTableWidth = 10;
+  this.tileTableHeight = 10;
+
+
   this.lineWidth = 2;
   this.hardWallMultiplier = 1;
   this.wallColor = "#2c3e50";

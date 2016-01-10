@@ -2,6 +2,9 @@ var renderer = new Renderer();
 
 var currentKyu = 25;
 
+var readyToPlay = false;
+var inAGame = false;
+
 if (localStorage.getItem('EdKyu')) {
 	currentKyu = JSON.parse(localStorage.getItem('EdKyu'));
 	currentKyu = 20;
@@ -10,10 +13,68 @@ else {
 	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
 }
 
+var socket = io('http://localhost:3000');
+var thePlayerID = 0;
+var pingPong = 0;
+var lastPingSent = Date.now();
 
-var level = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
-level.kyu = currentKyu;
-level.createNewLevel();
+function pinging () {
+	socket.emit('ping', {playerID: thePlayerID});
+	lastPingSent = Date.now();
+}
+
+var pingIntervalID = setInterval(pinging, 1000);
+
+socket.on('pong', function(msg){
+	pingPong = Date.now() - lastPingSent;
+	if (thePlayerID !== 0 && !readyToPlay) {
+		var levelCreated = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
+		levelCreated.createNewLevel();
+		readyToPlay = true;
+		socket.emit('readyToPlay',{level: levelCreated.serialize() });
+	}
+});
+
+socket.on('playerID', function(msg){
+	thePlayerID = msg;
+});
+
+socket.on('startAJum', function(msg){
+	console.log('startingAJump');
+	var delay = (msg.pingPong + pingPong) / 2;
+	pause();
+	level.update(- delay);
+	level.playerTable[1].startAJump();
+	level.update(delay);
+	start();
+});
+
+socket.on('endGame', function(msg){
+	//need to interrupt the game here
+});
+
+
+var level = new Level();
+level.on('positions.updated', function () { renderer.drawNewFrame(level); });
+level.on('background.updated', function () { renderer.newBackground(); });
+level.on('startAJump', function () {
+	socket.emit('startAJump', {pingPong: pingPong});
+});
+
+
+
+socket.on('startGame', function(msg){
+	level.deserialize(msg.level);
+	player = level.addANewPlayer();
+	opponent = level.addANewPlayer();
+	inAGame = true;
+	setTimeout(start, 1000 - pingPong);
+});
+
+
+
+
+
 
 //level.addANewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
@@ -22,15 +83,11 @@ level.createNewLevel();
 // transform a level into a table with the minimum amount of information
 
 
-var string = level.serialize();
-level = new Level({serializedVersion: string});
-
-p = level.addANewPlayer();
 
 
-// Remains to be seen: should we render a new frame every time the physics engine is updated?
-level.on('positions.updated', function () { renderer.drawNewFrame(level); });
-level.on('background.updated', function () { renderer.newBackground(); });
+
+
+
 
 
 // Should this next line be in the AI constructor?
@@ -48,25 +105,27 @@ var startTouch = function(e) {
     return;
   }
 
-  // Go back in time
-  if (e.keyCode === 13) {
-    timeDirection *= -1;
-    return;
-  }
+	// Go back in time
+	if (e.keyCode === 13) {
+		timeDirection *= -1;
+		return;
+	}
 
-  // Increase/decrease speed
-  if (e.keyCode === 38) {
-    speedBoost *= 1.1;
-    return;
-  }
-  if (e.keyCode === 40) {
-    speedBoost /= 1.1;
-    return;
-  }
+	// Increase/decrease speed
+	if (e.keyCode === 38) {
+		speedBoost *= 1.1;
+		return;
+	}
+	if (e.keyCode === 40) {
+		speedBoost /= 1.1;
+		return;
+	}
 
-  //if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
+	//if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
 	level.startTouch();
+
+	return;
 }
 
 
@@ -103,16 +162,14 @@ function main () {
 }
 
 function start () {
+	playing = true;
   lastTime = Date.now();
+	level.update(0);
   intervalId = setInterval(main, 20);
 }
 
 function pause () {
+	playing = false;
   clearInterval(intervalId);
   intervalId = undefined;
 }
-
-
-
-level.update(0);
-start();

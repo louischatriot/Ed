@@ -8,7 +8,6 @@ function Level(_opts) {
   this.playerSpeed = 0.06 / 30;
   this.readyToJump = true;   // To prevent a keydown from continually making a player jump
   this.currentlyPlaying = true;   // Use to pause the game
-
   this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow = 4;   // Number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
@@ -112,8 +111,9 @@ Level.prototype.emit = function (evt, message) {
 
 
 Level.prototype.startTouch = function() {
-  if (this.readyToJump) {
+  if (this.readyToJump && this.playerTable[0] !== undefined) {
     this.playerTable[0].startAJump();
+    this.emit('startAJump');
     this.readyToJump = false;
   }
 }
