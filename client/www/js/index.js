@@ -19,8 +19,8 @@ var pingPong = 0;
 var lastPingSent = Date.now();
 
 function pinging () {
-	socket.emit('ping', {playerID: thePlayerID});
 	lastPingSent = Date.now();
+	socket.emit('ping');
 }
 
 var pingIntervalID = setInterval(pinging, 1000);

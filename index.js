@@ -1,6 +1,10 @@
-var app = require('express')();
+var express=require('express');
+var app=express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+
+app.use(express.static(__dirname, '/client/www'));
+//app.use("/scripts", express.static(__dirname + '/client/www/js'));
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/client/www/index.html');
@@ -29,13 +33,14 @@ function findFirstAvailableID(table) {
 // TODO: add error handler on socket
 io.on('connection', function(socket){
   var i = findFirstAvailableID(playerTable);
-  console.log("a user just connected. ID: " + i);
+  console.log("a user did just connected. ID: " + i);
   socket.join(i);
   socket.playerID = i;
   io.sockets.in(i).emit('playerID',i);
 
   socket.on('ping', function(data){
-    if (data.playerID !== 0 ) { io.sockets.in(data.playerID).emit('pong');}
+    console.log('ping');
+    if (socket.playerID !== 0 ) { io.sockets.in(socket.playerID).emit('pong');}
   });
 
   socket.on('disconnect', function(){
