@@ -14,7 +14,7 @@ app.get('/', function(req, res){
 });
 
 var playerTable = new Array();
-for (var i = 0; i < 10; i++) {
+for (var i = 0; i < 100; i++) {
   playerTable.push({playerID:i, occupied: false, inGameWith: 0});
 }
 var waitingPlayer = 0; //0 is the empty ID
@@ -36,7 +36,7 @@ function findFirstAvailableID(table) {
 // TODO: add error handler on socket
 io.on('connection', function(socket){
   var i = findFirstAvailableID(playerTable);
-  console.log("a user did just connected. ID: " + i);
+  console.log("a user just connected. ID: " + i);
   socket.join(i);
   socket.playerID = i;
   io.sockets.in(i).emit('playerID',i);
@@ -48,6 +48,9 @@ io.on('connection', function(socket){
 
   socket.on('disconnect', function(){
     console.log('user disconnected: ' + socket.playerID);
+    if (socket.playerID === waitingPlayer) {
+      waitingPlayer = 0;
+    }
     var player = playerTable[socket.playerID];
     player.occupied = false;
     if (player.inGameWith !== 0) {
@@ -58,13 +61,13 @@ io.on('connection', function(socket){
 
   socket.on('readyToPlay', function (data) {
     console.log('readyToPlay: ' + socket.playerID);
-    if (waitingPlayer === 0) {
+    if (waitingPlayer === 0 || waitingPlayer === socket.playerID) {
       waitingPlayer = socket.playerID;
       waitingLevel = data.level;
     }
     else {
       //start a game
-      console.log("game is starting");
+      console.log("game is starting between" + waitingPlayer + "and " + socket.playerID);
       playerTable[socket.playerID].inGameWith = waitingPlayer;
       playerTable[waitingPlayer].inGameWith = socket.playerID;
       io.sockets.in(socket.playerID).emit('startGame',{ level: waitingLevel});
@@ -73,7 +76,7 @@ io.on('connection', function(socket){
         io.sockets.in(socket.playerID).emit('tempo');
         io.sockets.in(playerTable[socket.playerID].inGameWith).emit('tempo');
       }, 1/playerSpeed);
-      //waitingPlayer = 0;
+      waitingPlayer = 0;
     }
   });
 
