@@ -39,7 +39,7 @@ io.on('connection', function(socket){
   io.sockets.in(i).emit('playerID',i);
 
   socket.on('ping', function(data){
-    console.log('ping');
+    //console.log('ping');
     if (socket.playerID !== 0 ) { io.sockets.in(socket.playerID).emit('pong');}
   });
 
@@ -64,8 +64,8 @@ io.on('connection', function(socket){
       console.log("game is starting");
       playerTable[socket.playerID].inGameWith = waitingPlayer;
       playerTable[waitingPlayer].inGameWith = socket.playerID;
-      io.sockets.in(socket.playerID).emit('startGame',{ level: waitingLevel });
-      io.sockets.in(waitingPlayer).emit('startGame',{ level: waitingLevel });
+      io.sockets.in(socket.playerID).emit('startGame',{ level: waitingLevel, isMaster: true });
+      io.sockets.in(waitingPlayer).emit('startGame',{ level: waitingLevel, isMaster: false });
       waitingPlayer = 0;
     }
   });
@@ -75,6 +75,13 @@ io.on('connection', function(socket){
     if (playerTable[socket.playerID].inGameWith !== 0) {
       console.log('sendingJumpInfo to: ' + playerTable[socket.playerID].inGameWith);
       io.sockets.in(playerTable[socket.playerID].inGameWith).emit('startAJum', { pingPong: data.pingPong});
+    }
+  });
+
+  socket.on('positionUpdate', function(data){
+    //console.log('positionUpdate');
+    if (playerTable[socket.playerID].inGameWith !== 0) {
+      io.sockets.in(playerTable[socket.playerID].inGameWith).emit('positionUpdate', data);
     }
   });
 });

@@ -87,6 +87,29 @@ Robot.timeToRemember = 3500;   // In ms, how much history to remember for this r
 Robot.jumpLength = 0.8;   // As percentage of tile length
 
 
+Robot.prototype.serialize = function() {
+  return JSON.stringify({ speed: this.speed, isEnnemy: this.ennemy,
+     alwaysTurnsRight: this.alwaysTurnsRight, direction: this.direction,
+     x: this.x, y: this.y, controlPoints: this.controlPoints })
+}
+
+Robot.prototype.deserialize = function(string) {
+  var obj = JSON.parse(string);
+  this.speed = obj.string;
+  this.isEnnemy = obj.isEnnemy;
+  this.alwaysTurnsRight = obj.alwaysTurnsRight;
+  this.x = obj.x;
+  this.y = obj.y;
+  this.controlPoints = new CyclicArray();
+  this.controlPoints.a = obj.controlPoints.a;
+  this.controlPoints.i = obj.controlPoints.i;
+  this.controlPoints.size = obj.controlPoints.size;
+  this.controlPoints.stales = obj.controlPoints.stales;
+
+  this.direction = obj.direction;
+}
+
+
 Robot.prototype.emit = function (evt, message) {
   if (this.listeners[evt]) {
     this.listeners[evt].forEach(function (fn) { fn(message); });
@@ -489,5 +512,3 @@ Robot.prototype.movementTo = function (x, y) {
 var absDistance = function(a, b) {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
-
-

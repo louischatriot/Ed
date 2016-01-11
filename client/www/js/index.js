@@ -13,10 +13,11 @@ else {
 	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
 }
 
-var socket = io('http://localhost:3000');
+var socket = io('10.0.0.2:3000');
 var thePlayerID = 0;
 var pingPong = 0;
 var lastPingSent = Date.now();
+var isMaster = false;
 
 function pinging () {
 	lastPingSent = Date.now();
@@ -68,25 +69,26 @@ socket.on('startGame', function(msg){
 	player = level.addANewPlayer();
 	opponent = level.addANewPlayer();
 	inAGame = true;
+	isMaster = msg.isMaster;
 	setTimeout(start, 1000 - pingPong);
 });
 
 
+function sendPositionUpdate () {
+	socket.emit('positionUpdate', {masterPlayer: level.playerTable[0].serialize(), otherPlayer: level.playerTable[1].serialize(), ping: pingPong/2});
+}
 
 
-
+socket.on('positionUpdate', function(msg){
+	if (!isMaster) {
+		level.playerTable[0].deserialize(msg.otherPlayer);
+		level.playerTable[1].deserialize(msg.masterPlayer);
+		level.update(msg.ping + pingPong / 2);
+	}
+});
 
 //level.addANewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
-
-
-// transform a level into a table with the minimum amount of information
-
-
-
-
-
-
 
 
 
@@ -145,6 +147,7 @@ document.ontouchstart = startTouch;
 document.ontouchend = endTouch;
 
 
+
 /**
  * Main loop
  */
@@ -165,6 +168,9 @@ function start () {
 	playing = true;
   lastTime = Date.now();
 	level.update(0);
+	if (isMaster) {
+		positionUpdateIntervalId = setInterval(sendPositionUpdate, 500);
+	}
   intervalId = setInterval(main, 20);
 }
 
