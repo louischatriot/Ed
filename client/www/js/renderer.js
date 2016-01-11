@@ -34,8 +34,8 @@ function Renderer () {
   this.tileTableWidth = Math.floor(this.canvas.width / this.tileSize);
   this.tileTableHeight = Math.floor(this.canvas.height / this.tileSize);
 
-  this.tileTableWidth = 10;
-  this.tileTableHeight = 10;
+  this.tileTableWidth = 20;
+  this.tileTableHeight = 20;
 
 
   this.lineWidth = 2;

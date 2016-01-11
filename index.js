@@ -3,6 +3,9 @@ var app=express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
+var playerSpeed = 0.06 / 30;
+
+
 app.use(express.static(__dirname, '/client/www'));
 //app.use("/scripts", express.static(__dirname + '/client/www/js'));
 
@@ -64,9 +67,13 @@ io.on('connection', function(socket){
       console.log("game is starting");
       playerTable[socket.playerID].inGameWith = waitingPlayer;
       playerTable[waitingPlayer].inGameWith = socket.playerID;
-      io.sockets.in(socket.playerID).emit('startGame',{ level: waitingLevel, isMaster: true });
-      io.sockets.in(waitingPlayer).emit('startGame',{ level: waitingLevel, isMaster: false });
-      waitingPlayer = 0;
+      io.sockets.in(socket.playerID).emit('startGame',{ level: waitingLevel});
+      io.sockets.in(waitingPlayer).emit('startGame',{ level: waitingLevel});
+      var tempo = setInterval(function(){
+        io.sockets.in(socket.playerID).emit('tempo');
+        io.sockets.in(playerTable[socket.playerID].inGameWith).emit('tempo');
+      }, 1/playerSpeed);
+      //waitingPlayer = 0;
     }
   });
 
@@ -74,7 +81,7 @@ io.on('connection', function(socket){
     console.log('startAJump');
     if (playerTable[socket.playerID].inGameWith !== 0) {
       console.log('sendingJumpInfo to: ' + playerTable[socket.playerID].inGameWith);
-      io.sockets.in(playerTable[socket.playerID].inGameWith).emit('startAJum', { pingPong: data.pingPong});
+      io.sockets.in(playerTable[socket.playerID].inGameWith).emit('startAJump', { pingPong: data.pingPong});
     }
   });
 

@@ -17,7 +17,6 @@ var socket = io('10.0.0.2:3000');
 var thePlayerID = 0;
 var pingPong = 0;
 var lastPingSent = Date.now();
-var isMaster = false;
 
 function pinging () {
 	lastPingSent = Date.now();
@@ -40,7 +39,7 @@ socket.on('playerID', function(msg){
 	thePlayerID = msg;
 });
 
-socket.on('startAJum', function(msg){
+socket.on('startAJump', function(msg){
 	console.log('startingAJump');
 	var delay = (msg.pingPong + pingPong) / 2;
 	pause();
@@ -69,25 +68,29 @@ socket.on('startGame', function(msg){
 	player = level.addANewPlayer();
 	opponent = level.addANewPlayer();
 	inAGame = true;
-	isMaster = msg.isMaster;
 	setTimeout(start, 1000 - pingPong);
 });
 
 
 function sendPositionUpdate () {
-	socket.emit('positionUpdate', {masterPlayer: level.playerTable[0].miniSerialize(), otherPlayer: level.playerTable[1].miniSerialize(), ping: pingPong/2});
+	socket.emit('positionUpdate', {playerPosition: level.playerTable[0].miniSerialize(), ping: pingPong/2});
 }
 
 
 // TODO: we use the controlPoint array from the slave to update slave position, but it might be wrong.
 // solution: during pings, record ennemy ping, master sends the future position of slave.
 socket.on('positionUpdate', function(msg){
-	if (!isMaster) {
-		level.playerTable[0].miniDeserialize(msg.otherPlayer);
-		level.playerTable[1].miniDeserialize(msg.masterPlayer);
-		level.update(msg.ping + pingPong / 2);
-	}
+		level.playerTable[1].miniDeserialize(msg.playerPosition);
+		level.playerTable[1].updatePosition(msg.ping + pingPong / 2);
 });
+
+socket.on('tempo', function(msg){
+	setTimeout(function(){
+		level.adjustTempo();
+	}, 1000 - pingPong);
+});
+
+
 
 //level.addANewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
@@ -170,9 +173,8 @@ function start () {
 	playing = true;
   lastTime = Date.now();
 	level.update(0);
-	if (isMaster) {
-		positionUpdateIntervalId = setInterval(sendPositionUpdate, 500);
-	}
+	positionUpdateIntervalId = setInterval(sendPositionUpdate, 500);
+	//setInterval(tempoAdjust,1/level.playerTable[0].speed);
   intervalId = setInterval(main, 20);
 }
 

@@ -70,6 +70,8 @@ function Robot(tile, level, speed, isEnnemy) {
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
 
+  this.tempoDelay = 0; //used to synchronize multiple players.
+
   // Remember latest history. For the beginning we consider that we spent an eternity up to now on the start tile
   var nTilesToRemember = Math.floor(Robot.timeToRemember * this.speed) * 3;
   this.controlPoints = new CyclicArray(nTilesToRemember);

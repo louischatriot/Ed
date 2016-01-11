@@ -49,6 +49,24 @@ Level.prototype.deserialize = function(string) {
 }
 
 
+Level.prototype.adjustTempo = function() {
+  for (var i = 0; i < this.playerTable.length; i++) {
+    var distanceToNextCenter = level.playerTable[i].movementTo(level.playerTable[i].getNextCenter());
+    var delay;
+    if (distanceToNextCenter < 1 - distanceToNextCenter) {
+      //player is late
+      delay = - distanceToNextCenter;
+    }	else {
+      //player is early
+      delay = 1 - distanceToNextCenter;
+    }
+    var speedAmortization = 5;
+    level.playerTable[i].speed = (speedAmortization - delay) * level.playerSpeed / speedAmortization;
+    console.log(delay);
+  }
+}
+
+
 Level.prototype.serialize = function() {
 	var serialTileTable = new Array();
 	for (var i = 0; i < this.tileTableWidth; i++) {
