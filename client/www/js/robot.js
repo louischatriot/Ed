@@ -86,6 +86,16 @@ Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
 Robot.timeToRemember = 3500;   // In ms, how much history to remember for this robot
 Robot.jumpLength = 0.8;   // As percentage of tile length
 
+Robot.prototype.miniSerialize = function() {
+  return JSON.stringify({ x: this.x, y: this.y, direction: this.direction });
+}
+
+Robot.prototype.miniDeserialize = function(string) {
+  var obj = JSON.parse(string);
+  this.x = obj.x;
+  this.y = obj.y;
+  this.direction = obj.direction;
+}
 
 Robot.prototype.serialize = function() {
   return JSON.stringify({ speed: this.speed, isEnnemy: this.ennemy,
