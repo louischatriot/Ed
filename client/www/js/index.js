@@ -84,14 +84,14 @@ socket.on('startGame', function(msg){
 
 
 function sendPositionUpdate () {
-	socket.emit('positionUpdate', {playerPosition: level.playerTable[0].miniSerialize(), ping: pingPong/2});
+	socket.emit('positionUpdate', {playerPosition: level.playerTable[0].miniSerialize(), ping: pingPong/2, playerID: level.playerTable[0].playerID});
 }
 
 
 // TODO: we use the controlPoint array from the slave to update slave position, but it might be wrong.
 // solution: during pings, record ennemy ping, master sends the future position of slave.
 socket.on('positionUpdate', function(msg){
-	var player = level.findPlayerFromPlayerID(msg.playerPosition.playerID);
+	var player = level.findPlayerFromPlayerID(msg.playerID);
 	player.miniDeserialize(msg.playerPosition);
 	player.updatePosition(msg.ping + pingPong / 2);
 });

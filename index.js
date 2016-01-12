@@ -25,7 +25,7 @@ var waitingLevel;
 
 var roomTable = new Array();
 for (var i = 0; i < 10; i++) {
-  roomTable.push({ waiting: true, numberOfPlayersToStart: 3, playerTable: new Array()});
+  roomTable.push({ waiting: true, numberOfPlayersToStart: 2, playerTable: new Array()});
 }
 
 function playerReady(socket, data) {

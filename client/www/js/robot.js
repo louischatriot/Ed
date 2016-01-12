@@ -90,7 +90,7 @@ Robot.timeToRemember = 3500;   // In ms, how much history to remember for this r
 Robot.jumpLength = 0.8;   // As percentage of tile length
 
 Robot.prototype.miniSerialize = function() {
-  return JSON.stringify({ x: this.x, y: this.y, direction: this.direction, playerID: this.playerID });
+  return JSON.stringify({ x: this.x, y: this.y, direction: this.direction });
 }
 
 Robot.prototype.miniDeserialize = function(string) {
@@ -98,7 +98,7 @@ Robot.prototype.miniDeserialize = function(string) {
   if (Math.abs(this.x - obj.x) + Math.abs(this.y - obj.y) > 0.5) {
     this.x = obj.x;
     this.y = obj.y;
-    this.direction = obj.direction;  
+    this.direction = obj.direction;
   }
 }
 
