@@ -4,6 +4,7 @@ var currentKyu = 25;
 
 var readyToPlay = false;
 var inAGame = false;
+var playerNumber; //an ID within the game for multiplayer game
 
 if (localStorage.getItem('EdKyu')) {
 	currentKyu = JSON.parse(localStorage.getItem('EdKyu'));
@@ -27,26 +28,27 @@ var pingIntervalID = setInterval(pinging, 1000);
 
 socket.on('pong', function(msg){
 	pingPong = Date.now() - lastPingSent;
-	if (thePlayerID !== 0 && !readyToPlay) {
-		var levelCreated = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
-		levelCreated.createNewLevel();
-		readyToPlay = true;
-		socket.emit('readyToPlay',{level: levelCreated.serialize() });
-	}
 });
 
 socket.on('playerID', function(msg){
 	thePlayerID = msg;
+	var levelCreated = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
+	levelCreated.createNewLevel();
+	readyToPlay = true;
+	socket.emit('readyToPlay',{level: levelCreated.serialize() });
 });
 
 socket.on('startAJump', function(msg){
 	console.log('startingAJump');
-	var delay = (msg.pingPong + pingPong) / 2;
-	pause();
-	level.update(- delay);
-	level.playerTable[1].startAJump();
-	level.update(delay);
-	start();
+	var player = level.findPlayerFromPlayerID(msg.playerID);
+	player.updatePosition(- msg.ping - pingPong / 2);
+	player.startAJump();
+	player.updatePosition(msg.ping + pingPong / 2)
+	//pause();
+	//level.update(- delay);
+	//level.playerTable[1].startAJump();
+	//level.update(delay);
+	//start();
 });
 
 socket.on('endGame', function(msg){
@@ -58,17 +60,26 @@ var level = new Level();
 level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 level.on('background.updated', function () { renderer.newBackground(); });
 level.on('startAJump', function () {
-	socket.emit('startAJump', {pingPong: pingPong});
+	socket.emit('startAJump', { ping: pingPong / 2, playerID: level.playerTable[0].playerID });
 });
 
 
 
 socket.on('startGame', function(msg){
 	level.deserialize(msg.level);
-	player = level.addANewPlayer();
-	opponent = level.addANewPlayer();
+	level.addANewPlayer();
+	console.log(msg.playerTable);
+	console.log(msg.yourIndex);
+	level.playerTable[0].playerID = msg.playerTable[msg.yourIndex];
+	for (var i = 0; i < msg.playerTable.length; i++) {
+		if (i !== msg.yourIndex) {
+			level.addANewPlayer();
+			level.playerTable[level.playerTable.length - 1].playerID = msg.playerTable[i];
+		}
+	}
+	console.log(level.playerTable);
 	inAGame = true;
-	setTimeout(start, 1000 - pingPong);
+	setTimeout(start, 1000 - pingPong/2);
 });
 
 
@@ -80,14 +91,16 @@ function sendPositionUpdate () {
 // TODO: we use the controlPoint array from the slave to update slave position, but it might be wrong.
 // solution: during pings, record ennemy ping, master sends the future position of slave.
 socket.on('positionUpdate', function(msg){
-		level.playerTable[1].miniDeserialize(msg.playerPosition);
-		level.playerTable[1].updatePosition(msg.ping + pingPong / 2);
+	var player = level.findPlayerFromPlayerID(msg.playerPosition.playerID);
+	player.miniDeserialize(msg.playerPosition);
+	player.updatePosition(msg.ping + pingPong / 2);
 });
+
 
 socket.on('tempo', function(msg){
 	setTimeout(function(){
 		level.adjustTempo();
-	}, 1000 - pingPong);
+	}, 1000 - pingPong/2);
 });
 
 

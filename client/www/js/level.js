@@ -62,8 +62,15 @@ Level.prototype.adjustTempo = function() {
     }
     var speedAmortization = 5;
     level.playerTable[i].speed = (speedAmortization - delay) * level.playerSpeed / speedAmortization;
-    console.log(delay);
+    //console.log(delay);
   }
+}
+
+Level.prototype.findPlayerFromPlayerID = function(playerID) {
+  for (var i = 0; i < this.playerTable.length; i++) {
+    if (this.playerTable[i].playerID === playerID) { return this.playerTable[i]; }
+  }
+  return undefined;
 }
 
 

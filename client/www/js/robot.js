@@ -69,6 +69,7 @@ function Robot(tile, level, speed, isEnnemy) {
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down
 	this.speed = speed;
 	this.isEnnemy = isEnnemy;
+  this.playerID; // for networking
 
   this.tempoDelay = 0; //used to synchronize multiple players.
 
@@ -89,15 +90,16 @@ Robot.timeToRemember = 3500;   // In ms, how much history to remember for this r
 Robot.jumpLength = 0.8;   // As percentage of tile length
 
 Robot.prototype.miniSerialize = function() {
-  return JSON.stringify({ x: this.x, y: this.y, direction: this.direction });
+  return JSON.stringify({ x: this.x, y: this.y, direction: this.direction, playerID: this.playerID });
 }
 
 Robot.prototype.miniDeserialize = function(string) {
   var obj = JSON.parse(string);
-  if (math.abs(this.x - obj.x) + math.abs(this.y - obj.y) > 0.1);
-  this.x = obj.x;
-  this.y = obj.y;
-  this.direction = obj.direction;
+  if (Math.abs(this.x - obj.x) + Math.abs(this.y - obj.y) > 0.5) {
+    this.x = obj.x;
+    this.y = obj.y;
+    this.direction = obj.direction;  
+  }
 }
 
 Robot.prototype.serialize = function() {
