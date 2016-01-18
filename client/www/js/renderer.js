@@ -31,12 +31,13 @@ function Renderer () {
     this.tileSize = 60;
     this.lineWidth = 5;
   }
-  this.tileTableWidth = Math.floor(this.canvas.width / this.tileSize);
-  this.tileTableHeight = Math.floor(this.canvas.height / this.tileSize);
+  this.maxTileTableWidth = Math.floor(this.canvas.width / this.tileSize);
+  this.maxTileTableHeight = Math.floor(this.canvas.height / this.tileSize);
 
-  this.tileTableWidth = 20;
+  this.tileTableWidth = 20; //if < max then consider recentering the screen.
   this.tileTableHeight = 20;
 
+  this.symetry = false; // if yes, reverse all x and y.
 
   this.lineWidth = 2;
   this.hardWallMultiplier = 1;
@@ -53,6 +54,13 @@ Renderer.robotColor = "#2c3e50";
 //Renderer.tileColorTable = ["#ecf0f1","#3498db","#2980b9","#16a085","#1abc9c","#27ae60","#2c3e50"];   // Blue tones
 //Renderer.tileColorTable = ["#ecf0f1","#f1c40f","#e67e22","#d35400","#f39c12","#e74c3c","#2c3e50"];   // Red tones
 Renderer.tileColorTable = ["#ecf0f1","#7f8c8d","#1abc9c","#9b59b6","#e74c3c","#f1c40f","#2c3e50"];   // Mixed tones
+
+var playerReady = false;
+var playerImage = new Image();
+playerImage.onload = function () {
+  playerReady = true;
+};
+playerImage.src = "/client/www/images/mainPlayer.png";
 
 
 /**
@@ -85,15 +93,28 @@ Renderer.prototype.backToBackground = function (tileTable) {
  * Draws a black frame around the maze. Purely esthetics.
  */
 Renderer.prototype.drawSurrounding = function () {
-  this.ctx.strokeStyle = this.hardWallColor;
-  this.ctx.lineWidth = 3;
-  this.ctx.beginPath();
-  this.ctx.moveTo(0, 0);
-  this.ctx.lineTo(this.tileTableWidth * this.tileSize, 0);
-  this.ctx.lineTo(this.tileTableWidth * this.tileSize, this.tileTableHeight * this.tileSize);
-  this.ctx.lineTo(0, this.tileTableHeight * this.tileSize);
-  this.ctx.lineTo(0, 0);
-  this.ctx.stroke();
+  if (!this.symetry) {
+    this.ctx.strokeStyle = this.hardWallColor;
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, 0);
+    this.ctx.lineTo(this.tileTableWidth * this.tileSize, 0);
+    this.ctx.lineTo(this.tileTableWidth * this.tileSize, this.tileTableHeight * this.tileSize);
+    this.ctx.lineTo(0, this.tileTableHeight * this.tileSize);
+    this.ctx.lineTo(0, 0);
+    this.ctx.stroke();
+  }
+  else {
+    this.ctx.strokeStyle = this.hardWallColor;
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, 0);
+    this.ctx.lineTo(0, this.tileTableWidth * this.tileSize);
+    this.ctx.lineTo(this.tileTableHeight * this.tileSize, this.tileTableWidth * this.tileSize);
+    this.ctx.lineTo(this.tileTableHeight * this.tileSize, 0);
+    this.ctx.lineTo(0, 0);
+    this.ctx.stroke();
+  }
 }
 
 
@@ -116,11 +137,28 @@ Renderer.prototype.drawRobot = function (robot, timeGap) {
   } else {
     robot.radius = Renderer.robotRadius;
   }
-  this.ctx.beginPath();
-  this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
-  this.ctx.fillStyle = robot.isEnnemy ? Renderer.ennemyColor : Renderer.robotColor;
-  this.ctx.closePath();
-  this.ctx.fill();
+  if (!this.symetry) {
+    this.ctx.beginPath();
+    this.ctx.arc(robot.x * this.tileSize, robot.y * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
+    this.ctx.fillStyle = robot.isEnnemy ? Renderer.ennemyColor : Renderer.robotColor;
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+  else {
+    this.ctx.beginPath();
+    this.ctx.arc(robot.y * this.tileSize, robot.x * this.tileSize, robot.radius * this.tileSize, 0, 2 * Math.PI);
+    this.ctx.fillStyle = robot.isEnnemy ? Renderer.ennemyColor : Renderer.robotColor;
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+
+
+
+  /*if (playReady) {
+    ctx.drawImage(playerImage,robot.x * this.tileSize,robot.y * this.tileSize);
+  }
+  */
+
 };
 
 
@@ -143,48 +181,97 @@ Renderer.prototype.drawNewFrame = function (level) {
  * As above removed all mentions of cameraX and cameraY for now
  */
 Renderer.prototype.drawTile = function (tile) {
-  // Draw the square itself
-  this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
-  this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);
+  if (!this.symetry) {
+    // Draw the square itself
+    this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
+    this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);
 
-  var objectiveSize = 0.5; //as % of tileSize
-  //Draw an objective tile if adequate.
-  if (tile.isObjective) {
-    this.ctx.fillStyle = Renderer.tileColorTable[0];
-    this.ctx.fillRect((tile.i + (1 - objectiveSize) / 2) * this.tileSize, (tile.j + (1 - objectiveSize) / 2) * this.tileSize, this.tileSize * objectiveSize, this.tileSize * objectiveSize)
+    var objectiveSize = 0.5; //as % of tileSize
+    //Draw an objective tile if adequate.
+    if (tile.isObjective) {
+      this.ctx.fillStyle = Renderer.tileColorTable[0];
+      this.ctx.fillRect((tile.i + (1 - objectiveSize) / 2) * this.tileSize, (tile.j + (1 - objectiveSize) / 2) * this.tileSize, this.tileSize * objectiveSize, this.tileSize * objectiveSize)
+    }
+
+    // Draw the walls
+    if (tile.upWall !== Tile.wallType.NOWALL) {
+      this.ctx.strokeStyle = (tile.upWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+      this.ctx.lineWidth = this.lineWidth * (tile.upWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+      this.ctx.beginPath();
+      this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
+      this.ctx.lineTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
+      this.ctx.stroke();
+    }
+    if (tile.downWall !== Tile.wallType.NOWALL) {
+      this.ctx.strokeStyle = (tile.downWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+      this.ctx.lineWidth = this.lineWidth * (tile.downWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+      this.ctx.beginPath();
+      this.ctx.moveTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
+      this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
+      this.ctx.stroke();
+    }
+    if (tile.leftWall !== Tile.wallType.NOWALL) {
+      this.ctx.strokeStyle = (tile.leftWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+      this.ctx.lineWidth = this.lineWidth * (tile.leftWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+      this.ctx.beginPath();
+      this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
+      this.ctx.lineTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
+      this.ctx.stroke();
+    }
+    if (tile.rightWall !== Tile.wallType.NOWALL) {
+      this.ctx.strokeStyle = (tile.rightWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+      this.ctx.lineWidth = this.lineWidth * (tile.rightWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+      this.ctx.beginPath();
+      this.ctx.moveTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
+      this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
+      this.ctx.stroke();
+    }
+    else {
+      // Draw the square itself
+      this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
+      this.ctx.fillRect(tile.j * this.tileSize, tile.i * this.tileSize, this.tileSize, this.tileSize);
+
+      var objectiveSize = 0.5; //as % of tileSize
+      //Draw an objective tile if adequate.
+      if (tile.isObjective) {
+        this.ctx.fillStyle = Renderer.tileColorTable[0];
+        this.ctx.fillRect((tile.j + (1 - objectiveSize) / 2) * this.tileSize, (tile.i + (1 - objectiveSize) / 2) * this.tileSize, this.tileSize * objectiveSize, this.tileSize * objectiveSize)
+      }
+
+      // Draw the walls
+      if (tile.upWall !== Tile.wallType.NOWALL) {
+        this.ctx.strokeStyle = (tile.upWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+        this.ctx.lineWidth = this.lineWidth * (tile.upWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+        this.ctx.beginPath();
+        this.ctx.moveTo(tile.j * this.tileSize, tile.i * this.tileSize);
+        this.ctx.lineTo((tile.j + 1) * this.tileSize, tile.i * this.tileSize);
+        this.ctx.stroke();
+      }
+      if (tile.downWall !== Tile.wallType.NOWALL) {
+        this.ctx.strokeStyle = (tile.downWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+        this.ctx.lineWidth = this.lineWidth * (tile.downWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+        this.ctx.beginPath();
+        this.ctx.moveTo(tile.j * this.tileSize, (tile.i + 1) * this.tileSize);
+        this.ctx.lineTo((tile.j + 1) * this.tileSize, (tile.i + 1) * this.tileSize);
+        this.ctx.stroke();
+      }
+      if (tile.leftWall !== Tile.wallType.NOWALL) {
+        this.ctx.strokeStyle = (tile.leftWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+        this.ctx.lineWidth = this.lineWidth * (tile.leftWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+        this.ctx.beginPath();
+        this.ctx.moveTo(tile.j * this.tileSize, tile.i * this.tileSize);
+        this.ctx.lineTo(tile.j * this.tileSize, (tile.i + 1) * this.tileSize);
+        this.ctx.stroke();
+      }
+      if (tile.rightWall !== Tile.wallType.NOWALL) {
+        this.ctx.strokeStyle = (tile.rightWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
+        this.ctx.lineWidth = this.lineWidth * (tile.rightWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
+        this.ctx.beginPath();
+        this.ctx.moveTo((tile.j + 1) * this.tileSize, tile.i * this.tileSize);
+        this.ctx.lineTo((tile.j + 1) * this.tileSize, (tile.i + 1) * this.tileSize);
+        this.ctx.stroke();
+      }
+    }
   }
 
-  // Draw the walls
-  if (tile.upWall !== Tile.wallType.NOWALL) {
-    this.ctx.strokeStyle = (tile.upWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
-    this.ctx.lineWidth = this.lineWidth * (tile.upWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
-    this.ctx.beginPath();
-    this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
-    this.ctx.lineTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
-    this.ctx.stroke();
-  }
-  if (tile.downWall !== Tile.wallType.NOWALL) {
-    this.ctx.strokeStyle = (tile.downWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
-    this.ctx.lineWidth = this.lineWidth * (tile.downWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
-    this.ctx.beginPath();
-    this.ctx.moveTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
-    this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
-    this.ctx.stroke();
-  }
-  if (tile.leftWall !== Tile.wallType.NOWALL) {
-    this.ctx.strokeStyle = (tile.leftWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
-    this.ctx.lineWidth = this.lineWidth * (tile.leftWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
-    this.ctx.beginPath();
-    this.ctx.moveTo(tile.i * this.tileSize, tile.j * this.tileSize);
-    this.ctx.lineTo(tile.i * this.tileSize, (tile.j + 1) * this.tileSize);
-    this.ctx.stroke();
-  }
-  if (tile.rightWall !== Tile.wallType.NOWALL) {
-    this.ctx.strokeStyle = (tile.rightWall === Tile.wallType.HARD ? this.hardWallColor : this.wallColor) ;
-    this.ctx.lineWidth = this.lineWidth * (tile.rightWall === Tile.wallType.HARD ? this.hardWallMultiplier : 1);
-    this.ctx.beginPath();
-    this.ctx.moveTo((tile.i + 1) * this.tileSize, tile.j * this.tileSize);
-    this.ctx.lineTo((tile.i + 1) * this.tileSize, (tile.j + 1) * this.tileSize);
-    this.ctx.stroke();
-  }
 };

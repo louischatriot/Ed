@@ -28,6 +28,29 @@ for (var i = 0; i < 10; i++) {
   roomTable.push({ waiting: true, numberOfPlayersToStart: 2, playerTable: new Array()});
 }
 
+
+// returns an object containing table size and a table containing symetry
+function findTableSizeInRoom(roomID) {
+  var symetryTable = [];
+  var maxWidth = 100;
+  var maxHeight = 100;
+  console.log(roomTable[roomID]);
+  for (var i = 0; i < roomTable[roomID].playerTable.length; i++) {
+    var player = playerTable[roomTable[roomID].playerTable[i]];
+    console.log(player);
+    var maxDimension = player.maxTileTableWidth;
+    var minDimension = player.maxTileTableHeight;
+    if (player.maxTileTableWidth < player.maxTileTableHeight) {
+      maxDimension = minDimension;
+      minDimension = player.maxTileTableWidth;
+      symetryTable.push(1);
+    } else { symetryTable.push(0); }
+    maxWidth = Math.min(maxWidth,maxDimension);
+    maxHeight = Math.min(maxHeight,minDimension);
+  }
+  return { tileTableWidth: maxWidth, tileTableHeight: maxHeight, symetryTable: symetryTable};
+}
+
 function playerReady(socket, data) {
   console.log('readyToPlay: ' + socket.playerID);
   var i = 0;
@@ -38,26 +61,33 @@ function playerReady(socket, data) {
   }
   roomTable[i].playerTable.push(socket.playerID); // TODO: check that playerID is not already in a room?
   socket.roomID = i;
+
+  playerTable[socket.playerID].maxTileTableWidth = data.maxTileTableWidth;
+  playerTable[socket.playerID].maxTileTableHeight = data.maxTileTableHeight;
+
   console.log("room for this player: " + i);
-  //console.log(roomTable);
-  //console.log(playerTable);
+
   if (roomTable[i].playerTable.length < roomTable[i].numberOfPlayersToStart) {
     console.log('not starting yet');
-    roomTable[i].waitingLevel = data.level; // TODO: every player ready sends a level. Innefficient
+    //roomTable[i].waitingLevel = data.level; // TODO: every player ready sends a level. Innefficient
   }
   else {
-    startAGame(i);
+    // last player is ready. We can aks the last player to create the game.
+    var dimensions = findTableSizeInRoom(i);
+    roomTable[i].symetryTable = dimensions.symetryTable;
+    console.log(dimensions);
+    io.sockets.in(socket.playerID).emit('createLevel', {dimensions: dimensions});
   }
 }
 
-function startAGame(roomID) {
+function startAGame(roomID, level) {
   console.log("game is starting in room" + roomID);
   var room = roomTable[roomID];
   room.waiting = false;
-  console.log(room.playerTable);
+  //console.log(room.playerTable);
   for (var i = 0; i < room.playerTable.length; i++) {
     console.log(room.playerTable[i]);
-    io.sockets.in(room.playerTable[i]).emit('startGame',{level: room.waitingLevel, playerTable: room.playerTable, yourIndex: i})
+    io.sockets.in(room.playerTable[i]).emit('startGame',{ level: level, playerTable: room.playerTable, yourIndex: i, symetry: room.symetryTable[i] });
   }
   var tempo = setInterval(function(){
     for (i = 0; i < room.playerTable.length; i++) {
@@ -114,6 +144,10 @@ io.on('connection', function(socket){
 
   socket.on('readyToPlay', function (data) {
     playerReady(socket,data);
+  });
+
+  socket.on('levelCreated', function (data) {
+    startAGame(socket.roomID, data.level);
   });
 
   socket.on('startAJump', function(data){

@@ -60,7 +60,7 @@ Level.prototype.adjustTempo = function() {
       //player is early
       delay = 1 - distanceToNextCenter;
     }
-    var speedAmortization = 5;
+    var speedAmortization = 2;
     level.playerTable[i].speed = (speedAmortization - delay) * level.playerSpeed / speedAmortization;
     //console.log(delay);
   }

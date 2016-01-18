@@ -95,7 +95,7 @@ Robot.prototype.miniSerialize = function() {
 
 Robot.prototype.miniDeserialize = function(string) {
   var obj = JSON.parse(string);
-  if (Math.abs(this.x - obj.x) + Math.abs(this.y - obj.y) > 0.5) {
+  if (Math.abs(this.x - obj.x) + Math.abs(this.y - obj.y) > 0.3) {
     this.x = obj.x;
     this.y = obj.y;
     this.direction = obj.direction;

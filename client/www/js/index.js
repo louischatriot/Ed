@@ -1,3 +1,6 @@
+//		<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+
+
 var renderer = new Renderer();
 
 var currentKyu = 25;
@@ -14,7 +17,8 @@ else {
 	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
 }
 
-var socket = io('10.0.0.2:3000');
+//var socket = io('10.0.0.2:3000');
+var socket = io('localhost:3000');
 var thePlayerID = 0;
 var pingPong = 0;
 var lastPingSent = Date.now();
@@ -26,17 +30,26 @@ function pinging () {
 
 var pingIntervalID = setInterval(pinging, 1000);
 
+
 socket.on('pong', function(msg){
 	pingPong = Date.now() - lastPingSent;
 });
 
+
 socket.on('playerID', function(msg){
 	thePlayerID = msg;
-	var levelCreated = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
-	levelCreated.createNewLevel();
+	//var levelCreated = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
+	//levelCreated.createNewLevel();
 	readyToPlay = true;
-	socket.emit('readyToPlay',{level: levelCreated.serialize() });
+	socket.emit('readyToPlay',{ maxTileTableWidth: renderer.maxTileTableWidth,maxTileTableHeight: renderer.maxTileTableHeight });
 });
+
+socket.on('createLevel', function(msg){
+	var levelCreated = new Level({tileTableWidth: msg.dimensions.tileTableWidth, tileTableHeight: msg.dimensions.tileTableHeight});
+	levelCreated.createNewLevel();
+	socket.emit('levelCreated',{ level: levelCreated.serialize() });
+});
+
 
 socket.on('startAJump', function(msg){
 	console.log('startingAJump');
@@ -68,8 +81,8 @@ level.on('startAJump', function () {
 socket.on('startGame', function(msg){
 	level.deserialize(msg.level);
 	level.addANewPlayer();
-	console.log(msg.playerTable);
-	console.log(msg.yourIndex);
+	//console.log(msg.playerTable);
+	//console.log(msg.yourIndex);
 	level.playerTable[0].playerID = msg.playerTable[msg.yourIndex];
 	for (var i = 0; i < msg.playerTable.length; i++) {
 		if (i !== msg.yourIndex) {
@@ -77,7 +90,10 @@ socket.on('startGame', function(msg){
 			level.playerTable[level.playerTable.length - 1].playerID = msg.playerTable[i];
 		}
 	}
-	console.log(level.playerTable);
+	renderer.tileTableWidth = level.tileTableWidth;
+	renderer.tileTableHeight = level.tileTableHeight;
+	renderer.symetry = msg.symetry;
+	//console.log(level.playerTable);
 	inAGame = true;
 	setTimeout(start, 1000 - pingPong/2);
 });
