@@ -462,3 +462,8 @@ Level.prototype.update = function(timeGap, dontUpdate) {
     if (! dontUpdate) { this.emit('positions.updated'); }
   }
 }
+
+
+
+// Interface for Node.js server
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') { module.exports = Level; }
