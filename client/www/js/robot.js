@@ -67,8 +67,6 @@ function Robot(tile, level, speed, isEnnemy) {
   this.y = tile.center().y;
   this.direction = Robot.directions.RIGHT;
 
-  this.kyu = 25; // How strong is this Robot? Probably should be in AI or in player's info.
-
 	this.jumpStartedAt = undefined;   // Position current jump was started
 
   this.direction = this.nextDirection(); // 0 = right, 1 = up, 2 = left, 3 = down

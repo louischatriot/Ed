@@ -1,18 +1,7 @@
 var renderer = new Renderer();
 
-var currentKyu = 25;
-
-if (localStorage.getItem('EdKyu')) {
-	currentKyu = JSON.parse(localStorage.getItem('EdKyu'));
-	currentKyu = 20;
-}
-else {
-	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
-}
-
 
 var level = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
-level.kyu = currentKyu;
 level.createNewLevel();
 
 //level.addANewPlayer();

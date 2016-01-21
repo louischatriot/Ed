@@ -23,8 +23,6 @@ function Level(_opts) {
 
   this.startingTile;
 
-  this.kyu = 25;
-
   this.listeners = {};
 
   var opts = _opts || {};
@@ -131,10 +129,6 @@ Level.prototype.endTouch = function() {
 
 Level.prototype.nextDifficulty = function() {
   this.currentlyPlaying = false;
-  if (this.kyu > 0) {
-    localStorage.setItem( 'EdKyu', JSON.stringify(this.kyu-1));
-    this.kyu --;
-  }
   this.createNewLevel();
   this.currentlyPlaying = true;
 }
@@ -193,9 +187,8 @@ Level.prototype.removeEverythingButSquareFromTileTable = function(mini, maxi, mi
 }
 
 
-Level.prototype.createNewLevel = function(kyu) {
+Level.prototype.createNewLevel = function() {
   this.reset();
-  //this.ennemyDifficulty = 0.3 - 0.012 * this.kyu;
 
   //the following line makes a single line in the middle of the screen. Could be useful for tutorial
   //this.removeEverythingButSquareFromTileTable(Math.floor(this.tileTableWidth / 6), this.tileTableWidth - Math.floor(this.tileTableWidth / 6), Math.floor(this.tileTableHeight / 2), Math.floor(this.tileTableHeight / 2));
