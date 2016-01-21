@@ -62,10 +62,6 @@ socket.on('ping', function (data) {
  * Launch game once it is created on server
  */
 socket.on('game.begun', function (data) {
-
-  console.log('--------------------');
-  console.log(data);
-
   var renderer = new Renderer()
     , level = Level.deserialize(data.level)
     , p = level.addANewPlayer();
