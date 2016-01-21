@@ -24,10 +24,26 @@ socket.on('game.begun', function (data) {
   you = level.getPlayerById(data.yourId);
 
 
+  /**
+   * Syncs from the server
+   */
+  socket.on('status', function (message) {
+    console.log("RECEIVED STATUS FROM THE SERVER AT " + (Date.now() - gameStartTime));
+    console.log(message);
+
+    message.players.forEach(function (p) {
+      if (p.id === you.id) { return; }   // You are authoritative on your position
+      var player = level.getPlayerById(p.id);
+      player.x = p.x;
+      player.y = p.y;
+      if (p.isJumping) { player.startJump; }
+    });
+  })
+
 
 
   /**
-   * Interactions system
+   * Interactions from the client
    */
   var startTouch = function(e) {
     // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
@@ -100,7 +116,7 @@ socket.on('game.begun', function (data) {
 
   function start () {
     lastTime = Date.now();
-    intervalId = setInterval(main, 20);
+    intervalId = setInterval(main, 40);
   }
 
   function pause () {
