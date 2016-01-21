@@ -472,6 +472,11 @@ Robot.prototype.getNextCenter = function () {
     if (x === Math.floor(x)) { x -= 0.01; }   // Tiles are exclusive of left border
   }
 
+  if (!this.getTile(x, y)) {
+    console.log("COULDNT GET TILE");
+    console.log(x + ' - ' + y);
+  }
+
   return this.getTile(x, y).center();
 };
 

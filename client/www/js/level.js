@@ -430,7 +430,9 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
  * @param {Number} timeGap How much to move time forward
  * @param {Boolean} dontUpdate Optional, if set to true don't update rest of the world (usually to avoid useless and time consuming redraws)
  */
-Level.prototype.update = function(timeGap, dontUpdate) {
+Level.prototype.update = function (timeGap, dontUpdate) {
+  this.currentTime += timeGap;
+
   if (timeGap > 1.01 * Level.maxTimeGapStep) {   // The 1.01 here is to avoid possible infinite recursion due to floating point math errors
     var fullSteps = Math.floor(timeGap / Level.maxTimeGapStep);
     timeGap -= fullSteps * Level.maxTimeGapStep;
@@ -447,6 +449,42 @@ Level.prototype.update = function(timeGap, dontUpdate) {
     if (! dontUpdate) { this.emit('positions.updated'); }
   }
 }
+
+
+/**
+ * Move game in time to given local clock time
+ */
+Level.prototype.moveToLocalTime = function (localTime) {
+  if (this.currentTime === undefined) { this.currentTime = this.startTime; }
+  var now = Date.now(), gap = now - this.currentTime;
+  this.currentTime = now;
+  this.update(gap);
+};
+
+
+/**
+ * Move game in time to given game time
+ */
+Level.prototype.moveToGameTime = function (gameTime) {
+  this.update(gameTime - this.getGameTime());
+  this.currentTime = this.startTime + gameTime;
+};
+
+
+/**
+ * Get game's time, 0 being when robots begin to move, in ms
+ */
+Level.prototype.getGameTime = function () {
+  return Date.now() - this.startTime;
+};
+
+
+/**
+ * Set game start time (in local time)
+ */
+Level.prototype.setStartTime = function (startTime) {
+  this.startTime = startTime;
+};
 
 
 

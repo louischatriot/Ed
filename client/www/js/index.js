@@ -3,40 +3,52 @@
  */
 socket.on('game.begun', function (data) {
   var renderer = new Renderer()
-    , level = Level.deserialize(data.serializedLevel)
+    , game = Level.deserialize(data.serializedLevel)
     , serverStartTime = Date.now() - (ping / 2)
     , readyToJump = true   // Prevent key down from sending continuous jumps
     , gameStartTime
     , players = [], you
     ;
 
-  console.log("SERVER START TIME: " + serverStartTime);
+  console.log("RECEIVED GAME BEGUN EVENT AT SERVER TIME: " + data.serverGameTime);
+  console.log("SERVER SENT MESSAGE AT LOCAL TIME: " + serverStartTime);
   console.log("YOU ARE PLAYER: " + data.yourId);
 
   // Remains to be seen: should we render a new frame every time the physics engine is updated?
-  level.on('positions.updated', function () { renderer.drawNewFrame(level); });
-  level.on('background.updated', function () { renderer.newBackground(); });
+  game.on('positions.updated', function () { renderer.drawNewFrame(game); });
+  game.on('background.updated', function () { renderer.newBackground(); });
 
-
+  // Initializing players
   data.playersIds.forEach(function (id) {
-    level.addNewPlayer(id);
+    game.addNewPlayer(id);
   });
-  you = level.getPlayerById(data.yourId);
+  you = game.getPlayerById(data.yourId);
+  you.isLocalPlayer = true;
 
+  game.startTime = serverStartTime + data.startGameAfter;
+
+  // DEV
+  window.game = game;
 
   /**
    * Syncs from the server
    */
   socket.on('status', function (message) {
-    console.log("RECEIVED STATUS FROM THE SERVER AT " + (Date.now() - gameStartTime));
+    console.log("RECEIVED STATUS FROM THE SERVER AT " + game.getGameTime());
     console.log(message);
 
-    message.players.forEach(function (p) {
-      if (p.id === you.id) { return; }   // You are authoritative on your position
-      var player = level.getPlayerById(p.id);
-      player.x = p.x;
-      player.y = p.y;
-      if (p.isJumping) { player.startJump; }
+    message.players.forEach(function (player) {
+      var localCopy = game.getPlayerById(player.id);
+
+      if (Math.abs(localCopy.x - player.x) + Math.abs(localCopy.y - player.y)) {
+        console.log("Player " + player.id + " out of sync - " + player.x + ' - ' + player.y + ' VS ' + localCopy.x + ' - ' + localCopy.y);
+      }
+
+      //if (p.id === you.id) { return; }   // You are authoritative on your position
+      //var player = game.getPlayerById(p.id);
+      //player.x = p.x;
+      //player.y = p.y;
+      //if (p.isJumping) { player.startJump; }
     });
   })
 
@@ -74,10 +86,10 @@ socket.on('game.begun', function (data) {
     if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
     if (readyToJump) {
-      level.getPlayerById(you.id).startJump();
+      game.getPlayerById(you.id).startJump();
       readyToJump = false;
-      console.log("JUMP COMMAND FROM YOU AT " + (Date.now() - gameStartTime));
-      socket.emit('action.jump');
+      console.log("JUMP COMMAND FROM YOU AT " + game.getGameTime());
+      socket.emit('action.jump', { clientGameTime: game.getGameTime() });
     }
   }
 
@@ -111,7 +123,7 @@ socket.on('game.begun', function (data) {
     var newTime = Date.now();
     var timeGap = (newTime - lastTime);
     lastTime = newTime;
-    level.update(speedBoost * timeDirection * timeGap);
+    game.update(speedBoost * timeDirection * timeGap);
   }
 
   function start () {
@@ -126,9 +138,9 @@ socket.on('game.begun', function (data) {
 
   // Start game after delay specified by the server
   setTimeout(function () {
-    gameStartTime = Date.now();
-    console.log("GAME STARTED AT " + gameStartTime);
-    level.update(0);
+    console.log("GAME STARTED AT " + game.getGameTime());
+    game.currentTime = game.startTime;
+    game.update(0);
     start();
   }, serverStartTime - Date.now() + data.startGameAfter);
 });
