@@ -3,17 +3,25 @@
  */
 socket.on('game.begun', function (data) {
   var renderer = new Renderer()
-    , level = Level.deserialize(data.level)
-    , p = level.addANewPlayer()
+    , level = Level.deserialize(data.serializedLevel)
     , serverStartTime = Date.now() - (ping / 2)
+    , readyToJump = true   // Prevent key down from sending continuous jumps
+    , gameStartTime
+    , players = [], you
     ;
 
   console.log("SERVER START TIME: " + serverStartTime);
+  console.log("YOU ARE PLAYER: " + data.yourId);
 
   // Remains to be seen: should we render a new frame every time the physics engine is updated?
   level.on('positions.updated', function () { renderer.drawNewFrame(level); });
   level.on('background.updated', function () { renderer.newBackground(); });
 
+
+  data.playersIds.forEach(function (id) {
+    level.addNewPlayer(id);
+  });
+  you = level.getPlayerById(data.yourId);
 
 
 
@@ -47,15 +55,20 @@ socket.on('game.begun', function (data) {
       return;
     }
 
-    //if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
+    if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
-    level.startTouch();
+    if (readyToJump) {
+      level.getPlayerById(you.id).startJump();
+      readyToJump = false;
+      console.log("JUMP COMMAND FROM YOU AT " + (Date.now() - gameStartTime));
+      socket.emit('action.jump');
+    }
   }
 
 
   var endTouch = function(e) {
     e.preventDefault();
-    level.endTouch();
+    readyToJump = true;
   }
 
 
@@ -97,6 +110,8 @@ socket.on('game.begun', function (data) {
 
   // Start game after delay specified by the server
   setTimeout(function () {
+    gameStartTime = Date.now();
+    console.log("GAME STARTED AT " + gameStartTime);
     level.update(0);
     start();
   }, serverStartTime - Date.now() + data.startGameAfter);

@@ -15,7 +15,7 @@ var level = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight:
 level.kyu = currentKyu;
 level.createNewLevel();
 
-//level.addANewPlayer();
+//level.addNewPlayer();
 //var theAI = new AI(level,level.playerTable[1]);
 
 
@@ -25,7 +25,7 @@ level.createNewLevel();
 var string = level.serialize();
 level = new Level({serializedVersion: string});
 
-p = level.addANewPlayer();
+p = level.addNewPlayer();
 
 
 // Remains to be seen: should we render a new frame every time the physics engine is updated?

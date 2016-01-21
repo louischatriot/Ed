@@ -31,7 +31,7 @@ AI.prototype.makeDecisionOnNextJump = function() {
   this.ennemyClones = new Array(); // eventually it would be better to keep the table stored from one step to the next
   this.updateFutureEnnemyPositions(1 / this.robot.speed , this.AIDepth); // TODO this shouldn't need to be recalculated every time. It's always the same table that just shifts by one every step. Est : 15min
   var next = this.AINext(nextTile(this.robot.tile,this.robot.direction),this.robot.direction,this.AIDepth,0,this.robot.jumping);
-  if (next.jump) { this.robot.startAJump(); }
+  if (next.jump) { this.robot.startJump(); }
 }
 
 

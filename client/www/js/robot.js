@@ -149,8 +149,8 @@ Robot.prototype.reposition = function(tile) {
 }
 
 
-// TODO: maybe implement jump cooldown
-Robot.prototype.startAJump = function() {
+// TODO: implement jump cooldown here
+Robot.prototype.startJump = function() {
   if (! this.isJumping()) {
     this.jumpStartedAt = { x: this.x, y: this.y };
     this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });

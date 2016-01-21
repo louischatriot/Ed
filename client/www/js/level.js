@@ -6,12 +6,11 @@ if (typeof require !== 'undefined') {
 function Level(_opts) {
   this.tileTableHeight = 0;
   this.tileTableWidth = 0;
-  this.tileTable = new Array();
-  this.playerTable = new Array();
-  this.ennemyTable = new Array();
+  this.tileTable = [];
+  this.playerTable = [];
+  this.ennemyTable = [];
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
-  this.readyToJump = true;   // To prevent a keydown from continually making a player jump
   this.currentlyPlaying = true;   // Use to pause the game
 
   this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
@@ -105,19 +104,6 @@ Level.prototype.emit = function (evt, message) {
 };
 
 
-Level.prototype.startTouch = function() {
-  if (this.readyToJump) {
-    this.playerTable[0].startAJump();
-    this.readyToJump = false;
-  }
-}
-
-
-Level.prototype.endTouch = function() {
-  this.readyToJump = true;
-}
-
-
 Level.prototype.nextDifficulty = function() {
   this.currentlyPlaying = false;
   this.createNewLevel();
@@ -125,12 +111,22 @@ Level.prototype.nextDifficulty = function() {
 }
 
 
-Level.prototype.addANewPlayer = function() {
+Level.prototype.addNewPlayer = function(_id) {
   var newPlayer = new Robot(this.startingTile,this,this.playerSpeed,false); // creates a new player on the origin tile
+  newPlayer.id = _id || Math.random().toString();
   newPlayer.reposition(this.startingTile);
   this.playerTable.push(newPlayer);
   newPlayer.on('win', function () { this.nextDifficulty(); });
 }
+
+
+Level.prototype.getPlayerById = function (id) {
+  for (var i = 0; i < this.playerTable.length; i += 1) {
+    if (this.playerTable[i].id === id) { return this.playerTable[i]; }
+  }
+
+  return null;
+};
 
 
 Level.prototype.resetPlayers = function() {
