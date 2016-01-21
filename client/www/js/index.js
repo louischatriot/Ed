@@ -1,77 +1,26 @@
-var socket = io('http://localhost:7777')
-  , originalOn = socket.constructor.prototype.on
-  , originalEmit = socket.constructor.prototype.emit
-  , pingWasUndefined = true
-  , ping
-  ;
-
-/**
- * Fake symetric delay on the ping
- * Needs to be symetric to test all aspects of synchronization
- */
-var currentDelay = 0
-
-socket.constructor.prototype.on = function (evt, handler) {
-  originalOn.call(socket, evt, function (data) {
-    setTimeout(function () {
-      handler(data);
-    }, currentDelay);
-  });
-};
-
-socket.constructor.prototype.emit = function (evt, data) {
-  setTimeout(function () {
-    originalEmit.call(socket, evt, data);
-  }, currentDelay);
-};
-
-
-/**
- * Utilities
- */
-function getQueryString () {
-  var qs = window.location.href.match(/[^\?]+\?(.+)/);
-  if (!qs) { return {}; }
-
-  var res = {};
-  qs = qs[1].split('&').forEach(function (e) {
-    res[e.split('=')[0]] = e.split('=')[1];
-  });
-
-  return res;
-}
-
-
-/**
- * Ping
- */
-socket.on('ping', function (data) {
-  if (data.formerPing) {
-    ping = data.formerPing;
-    //document.getElementById('ping').innerHTML = 'Ping (ms): ' + ping;
-    if (pingWasUndefined) {   // There should be a better way, with once event emitter
-      pingWasUndefined = false;
-      playerIsReady();
-    }
-  }
-  socket.emit('pong', data);
-});
-
-
 /**
  * Launch game once it is created on server
  */
 socket.on('game.begun', function (data) {
   var renderer = new Renderer()
     , level = Level.deserialize(data.level)
-    , p = level.addANewPlayer();
+    , p = level.addANewPlayer()
+    , serverStartTime = Date.now() - (ping / 2)
     ;
+
+  console.log("SERVER START TIME: " + serverStartTime);
 
   // Remains to be seen: should we render a new frame every time the physics engine is updated?
   level.on('positions.updated', function () { renderer.drawNewFrame(level); });
   level.on('background.updated', function () { renderer.newBackground(); });
 
 
+
+
+
+  /**
+   * Interactions system
+   */
   var startTouch = function(e) {
     // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
     if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
@@ -146,19 +95,10 @@ socket.on('game.begun', function (data) {
     intervalId = undefined;
   }
 
-  level.update(0);
-  start();
+  // Start game after delay specified by the server
+  setTimeout(function () {
+    level.update(0);
+    start();
+  }, serverStartTime - Date.now() + data.startGameAfter);
 });
-
-
-
-// Initialization
-var qs = getQueryString();
-var delay = parseInt(qs.delay, 10) || 0;   // Ping delay for testing purposes
-currentDelay = delay;
-
-function playerIsReady () {
-  console.log('SENDING READY EVENT TO SERVER');
-  socket.emit('player.ready');
-}
 
