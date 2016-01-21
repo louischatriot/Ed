@@ -1,3 +1,8 @@
+if (require) {
+  var Tile = require('./tile');
+}
+
+
 /**
  * Cyclic array, all indices are cast to a range of the given size (between 0 and size - 1)
  * this.i always points to the latest inserted element
@@ -491,3 +496,5 @@ var absDistance = function(a, b) {
 }
 
 
+// Interface for server
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') { module.exports = Robot; }

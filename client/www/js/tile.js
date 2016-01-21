@@ -93,3 +93,8 @@ Tile.prototype.newType = function (type) {
 Tile.prototype.center = function () {
   return { x: this.i + 1 / 2, y: this.j + 1 / 2 };
 };
+
+
+
+// Interface for server
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') { module.exports = Tile; }

@@ -1,3 +1,8 @@
+if (require) {
+  var Tile = require('./tile');
+  var Robot = require('./robot');
+}
+
 function Level(_opts) {
   this.tileTableHeight = 0;
   this.tileTableWidth = 0;
