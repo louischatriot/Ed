@@ -31,8 +31,6 @@ function Renderer () {
     this.tileSize = 60;
     this.lineWidth = 5;
   }
-  this.tileTableWidth = Math.floor(this.canvas.width / this.tileSize);
-  this.tileTableHeight = Math.floor(this.canvas.height / this.tileSize);
 
   this.lineWidth = 2;
   this.hardWallMultiplier = 1;
@@ -64,6 +62,7 @@ Renderer.prototype.backToBackground = function (tileTable) {
         this.drawTile(tileTable[i][j]);
       }
     }
+    this.drawSurrounding(tileTable.length, tileTable[0].length);
 
     this.$backgroundImage = $('<img src="' + this.canvas.toDataURL("image/png") + '">');
     this.$backgroundImage.css('position', 'fixed');
@@ -80,13 +79,13 @@ Renderer.prototype.backToBackground = function (tileTable) {
 /**
  * Draws a black frame around the maze. Purely esthetics.
  */
-Renderer.prototype.drawSurrounding = function () {
+Renderer.prototype.drawSurrounding = function (tileTableWidth, tileTableHeight) {
   this.ctx.strokeStyle = this.hardWallColor;
   this.ctx.lineWidth = 3;
   this.ctx.beginPath();
   this.ctx.moveTo(0, 0);
-  this.ctx.lineTo(this.tileTableWidth * this.tileSize, 0);
-  this.ctx.lineTo(this.tileTableWidth * this.tileSize, this.tileTableHeight * this.tileSize);
+  this.ctx.lineTo(tileTableWidth * this.tileSize, 0);
+  this.ctx.lineTo(tileTableWidth * this.tileSize, this.tileTableHeight * this.tileSize);
   this.ctx.lineTo(0, this.tileTableHeight * this.tileSize);
   this.ctx.lineTo(0, 0);
   this.ctx.stroke();
@@ -132,7 +131,6 @@ Renderer.prototype.drawNewFrame = function (level) {
   this.backToBackground(level.tileTable);
   level.ennemyTable.forEach(function (robot) { self.drawRobot(robot, timeGap); });
   level.playerTable.forEach(function (robot) { self.drawRobot(robot, timeGap); });
-  this.drawSurrounding();
 };
 
 
