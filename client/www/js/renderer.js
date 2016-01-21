@@ -127,7 +127,7 @@ Renderer.prototype.drawNewFrame = function (level) {
   var frameDrawTime = Date.now(), timeGap = frameDrawTime - this.lastFrameDrawTime;
   this.lastFrameDrawTime = frameDrawTime;
 
-  renderer.backToBackground(level.tileTable);
+  this.backToBackground(level.tileTable);
   level.ennemyTable.forEach(function (robot) { renderer.drawRobot(robot, timeGap); });
   level.playerTable.forEach(function (robot) { renderer.drawRobot(robot, timeGap); });
   this.drawSurrounding();
@@ -139,6 +139,9 @@ Renderer.prototype.drawNewFrame = function (level) {
  * As above removed all mentions of cameraX and cameraY for now
  */
 Renderer.prototype.drawTile = function (tile) {
+  console.log('DRAWWING TILE');
+  console.log(tile);
+
   // Draw the square itself
   this.ctx.fillStyle = Renderer.tileColorTable[tile.type];
   this.ctx.fillRect(tile.i * this.tileSize, tile.j * this.tileSize, this.tileSize, this.tileSize);

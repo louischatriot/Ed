@@ -1,4 +1,4 @@
-if (require) {
+if (typeof require !== 'undefined') {
   var Tile = require('./tile');
 }
 

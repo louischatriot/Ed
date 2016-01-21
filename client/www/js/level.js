@@ -1,4 +1,4 @@
-if (require) {
+if (typeof require !== 'undefined') {
   var Tile = require('./tile');
   var Robot = require('./robot');
 }
@@ -29,53 +29,44 @@ function Level(_opts) {
 
   if (opts.tileTableWidth) { this.tileTableWidth = opts.tileTableWidth; }
   if (opts.tileTableHeight) { this.tileTableHeight = opts.tileTableHeight; }
-  if (opts.serializedVersion) { this.deserialize(opts.serializedVersion); }
 }
 
 
-Level.prototype.deserialize = function(string) {
-  var obj = JSON.parse(string);
-  this.tileTableWidth = obj.tileTableWidth;
-  this.tileTableHeight = obj.tileTableHeight;
-  this.reset();
-  for (var i = 0; i < this.tileTableWidth; i++) {
-    for (var j = 0; j < this.tileTableHeight; j++) {
-      this.tileTable[i][j].deserialize(obj.tileTable[i][j].tile);
-      if (obj.tileTable[i][j].ennemy) {
-        var ennemy = new Robot(this.tileTable[i][j], this, this.ennemySpeed, true);
-        this.ennemyTable.push(ennemy);
-        this.tileTable[i][j].nearbyEnnemies.push(ennemy);
+Level.deserialize = function(string) {
+  var levelData = JSON.parse(string)
+    , level = new Level({ tileTableWidth: levelData.tileTableWidth, tileTableHeight: levelData.tileTableHeight });
+
+  level.tileTable = [];
+	for (var i = 0; i < level.tileTableWidth; i++) {
+		level.tileTable[i] = [];
+		for (var j = 0; j < level.tileTableHeight; j++) {
+			level.tileTable[i][j] = Tile.deserialize(levelData.tileTable[i][j].serializedTile);
+      if (levelData.tileTable[i][j].ennemy) {
+        var ennemy = new Robot(level.tileTable[i][j], level, level.ennemySpeed, true);
+        level.ennemyTable.push(ennemy);
+        level.tileTable[i][j].nearbyEnnemies.push(ennemy);
       }
-    }
-  }
-  this.updateStartingTile();
-  this.updateObjectiveTile();
+		}
+	}
+
+  level.updateStartingTile();
+  level.updateObjectiveTile();
+
+  return level;
 }
 
 
 Level.prototype.serialize = function() {
-	var serialTileTable = new Array();
+	var serialTileTable = [];
 	for (var i = 0; i < this.tileTableWidth; i++) {
-    serialTileTable[i] = new Array();
+    serialTileTable[i] = [];
 		for (var j = 0; j < this.tileTableHeight; j++) {
-      serialTileTable[i][j] = {tile: this.tileTable[i][j].serialize(), ennemy: this.tileHasEnnemy(this.tileTable[i][j])};
+      serialTileTable[i][j] = { serializedTile: this.tileTable[i][j].serialize(), ennemy: this.tileHasEnnemy(this.tileTable[i][j]) };
 		}
 	}
-	return JSON.stringify({tileTableHeight: this.tileTableHeight, tileTableWidth: this.tileTableWidth, tileTable: serialTileTable});
+
+	return JSON.stringify({ tileTableHeight: this.tileTableHeight, tileTableWidth: this.tileTableWidth, tileTable: serialTileTable });
 }
-/*
-Level.prototype.serialize = function() {
-	var tableResult = new Array();
-	tableResult.push(this.tileTableWidth);
-	tableResult.push(this.tileTableHeight);
-	for (var i = 0; i < this.tileTableWidth; i++) {
-		for (var j = 0; j < this.tileTableHeight; j++) {
-			this.tileTable[i][j].pushTile(tableResult,this);
-		}
-	}
-	return JSON.stringify(tableResult);;
-}
-*/
 
 
 Level.prototype.tileHasEnnemy = function(tile) {
@@ -154,7 +145,7 @@ Level.prototype.reset = function() {
 	for (var i = 0; i < this.tileTableWidth; i++) {
 		this.tileTable[i] = new Array();
 		for (var j = 0; j < this.tileTableHeight; j++) {
-			this.tileTable[i][j] = new Tile(i ,j ,0 ,this);
+			this.tileTable[i][j] = new Tile(i, j, 0);
 			if (i === 0) { this.tileTable[i][j].leftWall = Tile.wallType.HARD; }
 			if (i === this.tileTableWidth - 1) { this.tileTable[i][j].rightWall = Tile.wallType.HARD; }
 			if (j === 0) { this.tileTable[i][j].upWall = Tile.wallType.HARD; }

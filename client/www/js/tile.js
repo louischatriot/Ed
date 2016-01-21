@@ -17,42 +17,23 @@ Tile.wallType = { NOWALL: 0, SOFT: 1, HARD: 2 }
 
 
 Tile.prototype.serialize = function() {
-	return JSON.stringify({type: this.type, upWall: this.upWall, downWall: this.downWall, rightWall: this.rightWall, leftWall: this.leftWall, isObjective: this.objective});
+	return JSON.stringify({ type: this.type, upWall: this.upWall, downWall: this.downWall, rightWall: this.rightWall, leftWall: this.leftWall, isObjective: this.objective, i: this.i, j: this.j });
 }
 
-Tile.prototype.deserialize = function(string) {
-	var obj = JSON.parse(string);
-	this.type = obj.type; // 0 means is hasn't been filled by a corridor yet. 1 means it's inaccessible. All tiles in the same corridor have the same type.
-	this.upWall = obj.upWall;
-	this.rightWall = obj.rightWall;
-	this.leftWall = obj.leftWall;
-	this.downWall = obj.downWall;
-	this.isObjective = obj.isObjective;
+Tile.deserialize = function(string) {
+	var tileData = JSON.parse(string)
+    , tile = new Tile(tileData.i, tileData.j, 0);
+
+	tile.type = tileData.type;   // 0 means is hasn't been filled by a corridor yet. 1 means it's inaccessible. All tiles in the same corridor have the same type.
+	tile.upWall = tileData.upWall;
+	tile.rightWall = tileData.rightWall;
+	tile.leftWall = tileData.leftWall;
+	tile.downWall = tileData.downWall;
+	tile.isObjective = tileData.isObjective;
+
+  return tile;
 }
 
-
-//delete this when done serializing
-/*
-Tile.prototype.pushTile = function(table, level) {
-	table.push(this.type);
-	table.push(this.upWall);
-	table.push(this.downWall);
-	table.push(this.rightWall);
-	table.push(this.leftWall);
-	if (this.isObjective) { table.push(1); } else { table.push(0); }
-	if (this.hasEnnemy(level.ennemyTable)) { table.push(1); } else { table.push(0); }
-}
-
-/*
-Tile.prototype.hasEnnemy = function(ennemyTable) {
-	for (var n = 0; n < ennemyTable.length; n++) {
-		if (Math.floor(ennemyTable[n].x) === this.i && Math.floor(ennemyTable[n].y) === this.j) {
-			return true;
-		}
-	}
-	return false;
-}
-*/
 
 Tile.prototype.makeInnaccessible = function(level) {
 	this.upWall = Tile.wallType.HARD;
@@ -82,7 +63,6 @@ Tile.prototype.removeEnnemiesFromCorridor = function(level) {
 
   }
 }
-
 
 
 Tile.prototype.newType = function (type) {
