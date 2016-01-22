@@ -11,7 +11,7 @@ function globalHandler (req, res) {
   }
 
   res.writeHead(200, {'Content-Type': 'text/plain'});
-  return res.end('Hello World\n');
+  return res.end('Hello World this is Ed the last robot game\n');
 }
 
 
