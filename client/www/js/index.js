@@ -14,9 +14,10 @@ socket.on('game.begun', function (data) {
   console.log("SERVER SENT MESSAGE AT LOCAL TIME: " + serverStartTime);
   console.log("YOU ARE PLAYER: " + data.yourId);
 
-  // Remains to be seen: should we render a new frame every time the physics engine is updated?
+  // Attach events and draw background hile waiting for actual game start
   game.on('positions.updated', function () { renderer.drawNewFrame(game); });
   game.on('background.updated', function () { renderer.newBackground(); });
+  game.update(0);
 
   // Initializing players
   data.playersIds.forEach(function (id) {
@@ -86,9 +87,9 @@ socket.on('game.begun', function (data) {
     if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
     if (readyToJump) {
+      game.log("Sent jump command");
       game.getPlayerById(you.id).startJump();
       readyToJump = false;
-      console.log("JUMP COMMAND FROM YOU AT " + game.getGameTime());
       socket.emit('action.jump', { clientGameTime: game.getGameTime() });
     }
   }
@@ -117,6 +118,7 @@ socket.on('game.begun', function (data) {
     , intervalId = undefined
     , timeDirection = 1
     , speedBoost = 1
+    , paused = false
     ;
 
   function main () {
@@ -124,23 +126,22 @@ socket.on('game.begun', function (data) {
     var timeGap = (newTime - lastTime);
     lastTime = newTime;
     game.update(speedBoost * timeDirection * timeGap);
+    if (!paused) { setTimeout(main, 40); }
   }
 
   function start () {
+    paused = false;
     lastTime = Date.now();
-    intervalId = setInterval(main, 40);
+    main();
   }
 
   function pause () {
-    clearInterval(intervalId);
-    intervalId = undefined;
+    paused = true;
   }
 
   // Start game after delay specified by the server
   setTimeout(function () {
-    console.log("GAME STARTED AT " + game.getGameTime());
-    game.currentTime = game.startTime;
-    game.update(0);
+    game.log("Game started");
     start();
   }, serverStartTime - Date.now() + data.startGameAfter);
 });

@@ -12,6 +12,7 @@ function Level(_opts) {
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
   this.currentlyPlaying = true;   // Use to pause the game
+  this.currentTime = 0;
 
   this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow = 4;   // Number of ennemies per corridors. Higher is harder. standard=2
@@ -431,8 +432,6 @@ Level.prototype.createPath = function(startTile,lengthProba,switchbacksProba,enn
  * @param {Boolean} dontUpdate Optional, if set to true don't update rest of the world (usually to avoid useless and time consuming redraws)
  */
 Level.prototype.update = function (timeGap, dontUpdate) {
-  this.currentTime += timeGap;
-
   if (timeGap > 1.01 * Level.maxTimeGapStep) {   // The 1.01 here is to avoid possible infinite recursion due to floating point math errors
     var fullSteps = Math.floor(timeGap / Level.maxTimeGapStep);
     timeGap -= fullSteps * Level.maxTimeGapStep;
@@ -441,6 +440,8 @@ Level.prototype.update = function (timeGap, dontUpdate) {
     }
     this.update(timeGap);
     return;
+  } else {
+    this.currentTime += timeGap;
   }
 
   if (this.currentlyPlaying) {
@@ -454,21 +455,21 @@ Level.prototype.update = function (timeGap, dontUpdate) {
 /**
  * Move game in time to given local clock time
  */
-Level.prototype.moveToLocalTime = function (localTime) {
-  if (this.currentTime === undefined) { this.currentTime = this.startTime; }
-  var now = Date.now(), gap = now - this.currentTime;
-  this.currentTime = now;
-  this.update(gap);
-};
+//Level.prototype.moveToLocalTime = function (localTime) {
+  //if (this.currentTime === undefined) { this.currentTime = this.startTime; }
+  //var now = Date.now(), gap = now - this.currentTime;
+  //this.currentTime = now;
+  //this.update(gap);
+//};
 
 
 /**
  * Move game in time to given game time
  */
-Level.prototype.moveToGameTime = function (gameTime) {
-  this.update(gameTime - this.getGameTime());
-  this.currentTime = this.startTime + gameTime;
-};
+//Level.prototype.moveToGameTime = function (gameTime) {
+  //this.update(gameTime - this.getGameTime());
+  //this.currentTime = this.startTime + gameTime;
+//};
 
 
 /**
@@ -480,11 +481,27 @@ Level.prototype.getGameTime = function () {
 
 
 /**
+ * Get the idea game time, i.e. the internal currentTime
+ */
+Level.prototype.getIdealGameTime = function () {
+  return this.currentTime;
+};
+
+
+/**
+ * Log a message with the level's actual and ideal game times
+ */
+Level.prototype.log = function (message) {
+  console.log(message + ' - actual: ' + this.getGameTime() + ' - ideal: ' + this.getIdealGameTime());
+};
+
+
+/**
  * Set game start time (in local time)
  */
-Level.prototype.setStartTime = function (startTime) {
-  this.startTime = startTime;
-};
+//Level.prototype.setStartTime = function (startTime) {
+  //this.startTime = startTime;
+//};
 
 
 
