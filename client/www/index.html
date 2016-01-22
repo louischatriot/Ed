@@ -12,10 +12,11 @@
 		<title>Ed-the last robot</title>
 	</head>
 	<body>
+		<script src="config.js"></script>
 		<script src="js/jquery.min.js"></script>
 		<script src="js/socket.io.js"></script>
     <script>
-      var socket = io('http://localhost:7777');
+      var socket = io(config.server);
     </script>
 		<script src="js/ping.js"></script>
 		<script src="js/tile.js"></script>
