@@ -52,7 +52,7 @@ socket.on('game.begun', function (data) {
     });
 
     game.update(gap * (-1));
-  })
+  });
 
 
 
