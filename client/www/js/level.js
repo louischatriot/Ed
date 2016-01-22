@@ -491,8 +491,10 @@ Level.prototype.getIdealGameTime = function () {
 /**
  * Log a message with the level's actual and ideal game times
  */
-Level.prototype.log = function (message) {
-  console.log(message + ' - actual: ' + this.getGameTime() + ' - ideal: ' + this.getIdealGameTime());
+Level.prototype.log = function (message, logAbsoluteTime) {
+  var m = 'LEVEL - ' + message + ' - actual: ' + this.getGameTime() + ' - ideal: ' + this.getIdealGameTime();
+  if (logAbsoluteTime) { m += ' - absolute: ' + Date.now(); }
+  console.log(m);
 };
 
 

@@ -35,22 +35,23 @@ socket.on('game.begun', function (data) {
    * Syncs from the server
    */
   socket.on('status', function (message) {
-    console.log("RECEIVED STATUS FROM THE SERVER AT " + game.getGameTime());
+    game.log("Received status from server");
     console.log(message);
 
-    message.players.forEach(function (player) {
-      var localCopy = game.getPlayerById(player.id);
+    var gap = message.idealTime - game.getIdealGameTime();
 
-      if (Math.abs(localCopy.x - player.x) + Math.abs(localCopy.y - player.y)) {
-        console.log("Player " + player.id + " out of sync - " + player.x + ' - ' + player.y + ' VS ' + localCopy.x + ' - ' + localCopy.y);
-      }
+    game.update(gap);
 
-      //if (p.id === you.id) { return; }   // You are authoritative on your position
-      //var player = game.getPlayerById(p.id);
-      //player.x = p.x;
-      //player.y = p.y;
-      //if (p.isJumping) { player.startJump; }
+    message.players.forEach(function (p) {
+      if (p.id === you.id) { return; }   // You are authoritative on your position
+      var player = game.getPlayerById(p.id);
+      player.x = p.x;
+      player.y = p.y;
+      player.direction = p.direction;
+      if (p.isJumping) { player.startJump(); }
     });
+
+    game.update(gap * (-1));
   })
 
 
@@ -87,10 +88,10 @@ socket.on('game.begun', function (data) {
     if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
     if (readyToJump) {
-      game.log("Sent jump command");
+      game.log("Sent jump command", true);
       game.getPlayerById(you.id).startJump();
       readyToJump = false;
-      socket.emit('action.jump', { clientGameTime: game.getGameTime() });
+      socket.emit('action.jump', { actualTime: game.getGameTime(), idealTime: game.getIdealGameTime() });
     }
   }
 

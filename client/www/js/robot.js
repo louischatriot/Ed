@@ -474,6 +474,7 @@ Robot.prototype.getNextCenter = function () {
 
   if (!this.getTile(x, y)) {
     console.log("COULDNT GET TILE");
+    console.log("Robot: " + this.x + ' - ' + this.y + ' - ' + this.direction);
     console.log(x + ' - ' + y);
   }
 
