@@ -1,35 +1,43 @@
+var renderer = new Renderer()
+  , game, startGameAfter
+  , players = []
+  , you
+
 /**
- * Launch game once it is created on server
+ * Prepare game (level creation, intitial rendering) upon receiving game data,
+ * then warn server that client is ready to actually start the game
+ * This two-step approach is necessary to avoid time disconnect between server
+ * and clients, as we don't know how much time the level data transfer took
  */
-socket.on('game.begun', function (data) {
-  //var renderer = new Renderer()
-    //, game = new Level({})
-    //, serverStartTime = Date.now() - (ping / 2)
-    //, readyToJump = true   // Prevent key down from sending continuous jumps
-    //, players = [], you
-    //;
+socket.on('game.data', function (data) {
+  console.log("Received game data");
 
-  console.log("====================");
-
-  game.log("Received game data from server, creating local copy", true);
-  console.log("YOU ARE PLAYER: " + data.yourId);
-
-  // Attach events and draw background hile waiting for actual game start
+  // Initialize game
+  game = Level.deserialize(data.serializedLevel);
   game.on('positions.updated', function () { renderer.drawNewFrame(game); });
   game.on('background.updated', function () { renderer.newBackground(); });
   game.update(0);
 
-  // Initializing players
+  // Initialize players
   data.playersIds.forEach(function (id) {
     game.addNewPlayer(id);
   });
   you = game.getPlayerById(data.yourId);
   you.isLocalPlayer = true;
+  console.log("YOU ARE PLAYER: " + data.yourId);
 
-  game.startTime = serverStartTime + data.startGameAfter;
+  startGameAfter = data.startGameAfter;
 
-  // DEV
-  window.game = game;
+  socket.emit('game.prepared');
+});
+
+
+
+/**
+ * Launch game once it is created on server
+ */
+socket.on('game.begin', function () {
+  var readyToJump = true;   // Prevent key down from sending continuous jumps
 
   /**
    * Syncs from the server
@@ -142,8 +150,9 @@ socket.on('game.begun', function (data) {
 
   // Start game after delay specified by the server
   setTimeout(function () {
+    game.startTime = Date.now();
     game.log("Game started");
     start();
-  }, serverStartTime - Date.now() + data.startGameAfter);
+  }, startGameAfter - (ping / 2));
 });
 
