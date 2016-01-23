@@ -2,16 +2,16 @@
  * Launch game once it is created on server
  */
 socket.on('game.begun', function (data) {
-  var renderer = new Renderer()
-    , game = Level.deserialize(data.serializedLevel)
-    , serverStartTime = Date.now() - (ping / 2)
-    , readyToJump = true   // Prevent key down from sending continuous jumps
-    , gameStartTime
-    , players = [], you
-    ;
+  //var renderer = new Renderer()
+    //, game = new Level({})
+    //, serverStartTime = Date.now() - (ping / 2)
+    //, readyToJump = true   // Prevent key down from sending continuous jumps
+    //, players = [], you
+    //;
 
-  console.log("RECEIVED GAME BEGUN EVENT AT SERVER TIME: " + data.serverGameTime);
-  console.log("SERVER SENT MESSAGE AT LOCAL TIME: " + serverStartTime);
+  console.log("====================");
+
+  game.log("Received game data from server, creating local copy", true);
   console.log("YOU ARE PLAYER: " + data.yourId);
 
   // Attach events and draw background hile waiting for actual game start
