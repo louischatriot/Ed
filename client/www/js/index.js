@@ -34,7 +34,7 @@ socket.on('game.data', function (data) {
 
 
 /**
- * Launch game once it is created on server
+ * Launch game once it is created on server and prepared on all clients
  */
 socket.on('game.begin', function () {
   var readyToJump = true;   // Prevent key down from sending continuous jumps
@@ -51,7 +51,7 @@ socket.on('game.begin', function () {
     game.update(gap);
 
     message.players.forEach(function (p) {
-      if (p.id === you.id) { return; }   // You are authoritative on your position
+      if (p.id === you.id) { return; }   // You are authoritative on your position (maybe should not be)
       var player = game.getPlayerById(p.id);
       player.x = p.x;
       player.y = p.y;
@@ -60,6 +60,7 @@ socket.on('game.begin', function () {
     });
 
     game.update(gap * (-1));
+    game.log("Client state updated");
   });
 
 
