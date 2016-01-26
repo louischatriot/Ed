@@ -319,12 +319,6 @@ Robot.prototype.updatePosition = function (timeGap) {
         } else {
           controlPoint.position = nextCenterPosition;
           this.direction = this.nextDirection();
-          /*if (this.tile.isObjective) { // TODO: Robots don't have tiles anymore.
-            //this.emit('won'); // TODO: currently doesn't seem to work.
-            this.level.nextDifficulty(); // won't need this once emit works.
-          }*/
-
-          this.emit('justPassedIntersection'); //send event for AI.
         }
         controlPoint.direction = this.direction;
         this.controlPoints.push(controlPoint);

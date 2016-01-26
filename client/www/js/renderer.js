@@ -102,7 +102,7 @@ Renderer.prototype.newBackground = function() {
  * Draw a robot, can be the current player, opponents or ennemies
  * Removed mention of cameraX and cameraY, unused for now
  */
-Renderer.prototype.drawRobot = function (robot, timeGap) {
+Renderer.prototype.drawRobot = function (robot) {
   if (!robot.radius) { robot.radius = Renderer.robotRadius; }
 
   var jump = robot.analyzeJump();
@@ -130,14 +130,18 @@ Renderer.prototype.drawRobot = function (robot, timeGap) {
  * Draw a new frame
  */
 Renderer.prototype.drawNewFrame = function (level) {
-  var self = this;
-
-  var frameDrawTime = Date.now(), timeGap = frameDrawTime - this.lastFrameDrawTime;
-  this.lastFrameDrawTime = frameDrawTime;
+  var self = this, localPlayer;
 
   this.backToBackground(level.tileTable);
-  level.ennemyTable.forEach(function (robot) { self.drawRobot(robot, timeGap); });
-  level.playerTable.forEach(function (robot) { self.drawRobot(robot, timeGap); });
+  level.ennemyTable.forEach(function (robot) { self.drawRobot(robot); });
+  level.playerTable.forEach(function (robot) {
+    if (robot.isLocalPlayer) {
+      localPlayer = robot;
+    } else {
+      self.drawRobot(robot);
+    }
+  });
+  if (localPlayer) { self.drawRobot(localPlayer); }   // Local player must be drawn on top of the others
 };
 
 

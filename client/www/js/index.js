@@ -2,6 +2,7 @@ var renderer = new Renderer()
   , game, startGameAfter
   , players = []
   , you
+  ;
 
 /**
  * Prepare game (level creation, intitial rendering) upon receiving game data,
@@ -47,11 +48,20 @@ socket.on('game.begin', function () {
     console.log(message);
 
     var gap = message.idealTime - game.getIdealGameTime();
+    // Gap needs to be negative or client will forget the jump
+    // If client lags behind server (update step being non zero), update it as much as possible
+    // Making gap negative
+    if (gap > 0) {
+      var newTime = Date.now();
+      var timeGap = (newTime - lastTime);
+      lastTime = newTime;
+      game.update(speedBoost * timeDirection * timeGap);
+      gap = message.idealTime - game.getIdealGameTime();
+    }
 
     game.update(gap);
 
     message.players.forEach(function (p) {
-      if (p.id === you.id) { return; }   // You are authoritative on your position (maybe should not be)
       var player = game.getPlayerById(p.id);
       player.x = p.x;
       player.y = p.y;
@@ -98,9 +108,9 @@ socket.on('game.begin', function () {
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
     if (readyToJump) {
       game.log("Sent jump command", true);
-      game.getPlayerById(you.id).startJump();
+      you.startJump();
       readyToJump = false;
-      socket.emit('action.jump', { actualTime: game.getGameTime(), idealTime: game.getIdealGameTime() });
+      socket.emit('action.jump', { actualTime: game.getGameTime(), idealTime: game.getIdealGameTime(), jumpStartedAt: you.jumpStartedAt });
     }
   }
 
@@ -136,6 +146,7 @@ socket.on('game.begin', function () {
     var timeGap = (newTime - lastTime);
     lastTime = newTime;
     game.update(speedBoost * timeDirection * timeGap);
+
     if (!paused) { setTimeout(main, 40); }
   }
 
