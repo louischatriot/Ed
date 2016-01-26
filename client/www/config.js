@@ -1,5 +1,4 @@
 var config = {};
-var env = 'prod';
 
 if (typeof env === 'undefined' || env === 'dev') {
   config.server = 'http://localhost:7777';
