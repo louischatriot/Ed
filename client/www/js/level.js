@@ -14,7 +14,7 @@ function Level(_opts) {
   this.currentlyPlaying = true;   // Use to pause the game
   this.currentTime = 0;
 
-  this.ennemyDifficulty = 0.1;   // Higher means more ennemies will appear. Harder. Standard=0.1
+  this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
   this.maxEnnemyPerRow = 4;   // Number of ennemies per corridors. Higher is harder. standard=2
   this.lengthDifficulty = 0.05;   // Higher means shorter corridors. Harder. standard= 0.05
   this.switchDifficulty = 0.4;   // Higher means more tortuous corridors. Easier. standard=0.4
