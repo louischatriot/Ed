@@ -1,4 +1,3 @@
-var env = 'prod';
 var config = {};
 
 if (typeof env === 'undefined' || env === 'dev') {
