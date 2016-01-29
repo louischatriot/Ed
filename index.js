@@ -1,8 +1,16 @@
 var http = require('http')
-  , app = http.createServer(globalHandler)
+  , express = require('express')
+  , app = express()
+  , server = http.Server(app)
+  //, app = http.createServer(globalHandler)
   , config = require('./lib/config')
   , games = require('./lib/games')
   ;
+
+app.get('/', function (req, res) {
+  res.send("Bloup");
+});
+
 
 function globalHandler (req, res) {
   if (req.url === "/favicon.ico") {
@@ -23,5 +31,5 @@ process.on('uncaughtException', function (err) {
 });
 
 // Tie socket.io to our HTTP server and launch it
-require('./lib/realtime').initialize(app);
-app.listen(config.serverPort);
+require('./lib/realtime').initialize(server);
+server.listen(config.serverPort);
