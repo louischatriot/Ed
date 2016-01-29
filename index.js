@@ -27,7 +27,9 @@ app.get('/game/*', function (req, res) {
   return res.sendFile(path.join(process.cwd(), "client/www", req.url.replace(/\/game\//, '')));
 });
 
-app.get('/game', function (req, res) { return res.redirect(302, '/game/'); });
+app.get('/game', function (req, res) {
+  return res.redirect(302, '/game/');
+});
 
 
 function globalHandler (req, res) {
