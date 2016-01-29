@@ -2,14 +2,32 @@ var http = require('http')
   , express = require('express')
   , app = express()
   , server = http.Server(app)
-  //, app = http.createServer(globalHandler)
+  , fs = require('fs')
+  , path = require('path')
   , config = require('./lib/config')
   , games = require('./lib/games')
   ;
 
-app.get('/', function (req, res) {
-  res.send("Bloup");
+// Splash screen and favicon
+app.get('/favicon.ico', function (req, res) { return res.sendFile(path.join(process.cwd(), "assets/img/favicon.ico")); });
+app.get('/', function (req, res) { return res.render("main.jade"); });
+
+
+// Game files. config is modified on the fly to point to production
+app.get('/game/config.js', function (req, res) {
+  // Maybe implement a cache as config will not be modified often
+  fs.readFile('client/www/config.js', 'utf8', function (err, contents) {
+    if (err) { return res.status(500).send("Error retrieving client configuration"); }
+    return res.send("var env='prod';" + contents);;
+  });
 });
+
+app.get('/game/*', function (req, res) {
+  if (req.url === "/game/") { req.url += "index.html"; }
+  return res.sendFile(path.join(process.cwd(), "client/www", req.url.replace(/\/game\//, '')));
+});
+
+app.get('/game', function (req, res) { return res.redirect(302, '/game/'); });
 
 
 function globalHandler (req, res) {
