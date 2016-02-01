@@ -59,6 +59,50 @@ CyclicArray.prototype.reverseExecute = function (fn) {
 
 
 /**
+ * Simple discrete time series for representing when jumps started
+ * Assumes points are set monotonically in time (always after the latest one) which will be the case here
+ */
+function JumpTimeSeries () {
+  this.times = [];
+}
+
+JumpTimeSeries.prototype.set = function (time) {
+  this.times.push(time);
+};
+
+// Get time of latest jump before given time (inclusive)
+JumpTimeSeries.prototype.getLastBefore = function (time) {
+  if (this.times.length === 0 || this.times[0] > time) { return null; }
+
+  // Could use a dichotomic approach to optimize here
+  for (var i = 0; i < this.times.length; i += 1) {
+    if (this.times[i] > time) { break; }
+  }
+  return this.times[i - 1];
+};
+
+// Get time of earliest jump after given time (inclusive)
+JumpTimeSeries.prototype.getFirstAfter = function (time) {
+  if (this.times.length === 0 || this.times[this.times.length - 1] < time) { return null; }
+
+  // Could use a dichotomic approach to optimize here
+  for (var i = this.times.length - 1; i >= 0; i -= 1) {
+    if (this.times[i] < time) { break; }
+  }
+  return this.times[i + 1];
+};
+
+
+var jts = new JumpTimeSeries();
+jts.set(10);
+jts.set(20);
+jts.set(30);
+jts.set(40);
+jts.set(50);
+
+
+
+/**
  * Robot (can be player or an ennemy)
  */
 function Robot(tile, level, speed, isEnnemy) {
@@ -149,8 +193,13 @@ Robot.prototype.reposition = function(tile) {
 }
 
 
-// TODO: implement jump cooldown here
-Robot.prototype.startJump = function() {
+/**
+ * Start a jump at the current position, and record it in this robot's list of jumps
+ * @param {Boolean} dontRecordJump Optional, defaults to false, if true, don't record jump as it's a replayed one
+ * TODO: implement jump cooldown here
+ */
+Robot.prototype.startJump = function(dontRecordJump) {
+  console.log(this.level.getIdealGameTime());
   if (! this.isJumping()) {
     this.jumpStartedAt = { x: this.x, y: this.y };
     this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });
@@ -283,8 +332,6 @@ Robot.prototype.updatePosition = function (timeGap) {
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
 
-        //if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
-        //if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
         if (controlPoint.justKilled) {
           var killedPosition = this.controlPoints.pop().position;
           this.x = killedPosition.x; this.y = killedPosition.y; }
