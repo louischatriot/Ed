@@ -244,13 +244,13 @@ Robot.prototype.analyzeJump = function () {
     distance += absDistance(controlPoint.position, lastPoint);
     lastPoint = controlPoint.position;
     if (controlPoint.jumpStart) {
-      if (distance < Robot.jumpLength) {
+      if (distance <= Robot.jumpLength) {
         return { isJumping: true, distanceSinceStart: distance };
       } else {
         break;
       }
     }
-    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled || controlPoint.jumpEnd) { break; }
+    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { break; }
     n++;
   }
 
@@ -266,9 +266,6 @@ Robot.prototype.analyzeJump = function () {
 Robot.prototype.updatePosition = function (timeGap) {
   // Get hit by ennemy: immediately stop jump and go back to start
   if (! this.isEnnemy && this.checkInterception()) {
-    if (this.isJumping()) {
-      this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, jumpEnd: true, jumpStartedAt: this.jumpStartedAt });
-    }
     this.jumpStartedAt = undefined;
     this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, killedPosition: true });
     this.reposition(this.level.tileTable[0][0]);
@@ -308,7 +305,7 @@ Robot.prototype.updatePosition = function (timeGap) {
     }
   } else {   // Going forward in time
     var movementToPerform, registerControlPoint, controlPoint
-      , jumpEnd, remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
+      , remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
 
     while (movement > 0) {
       var jump = this.analyzeJump();
@@ -316,25 +313,16 @@ Robot.prototype.updatePosition = function (timeGap) {
 
       nextCenterPosition = this.getNextCenter();
       distanceToNextCenter = this.movementTo(nextCenterPosition);
-      registerControlPoint = (movement >= distanceToNextCenter) || (jump.isJumping && movement >= remainingJump);
+      registerControlPoint = (movement >= distanceToNextCenter);
 
       movementToPerform = Math.min(movement, distanceToNextCenter);
-      if (jump.isJumping) { movementToPerform = Math.min(movementToPerform, remainingJump); }
-
       movement -= movementToPerform;
       this.move(movementToPerform);
       this.cumulativeMovement += movementToPerform;
 
       if (registerControlPoint) {
-        controlPoint = {};
-        if (jump.isJumping && remainingJump <= distanceToNextCenter) {
-          jumpEnd = { x: this.x, y: this.y };
-          jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
-          controlPoint.position = jumpEnd;
-          controlPoint.jumpEnd = true;
-          controlPoint.jumpStartedAt = this.jumpStartedAt;
-        } else {
-          controlPoint.position = nextCenterPosition;
+        controlPoint = { position: { x: this.x, y: this.y } };
+        if (!jump.isJumping) {
           this.direction = this.nextDirection();
         }
         controlPoint.direction = this.direction;
