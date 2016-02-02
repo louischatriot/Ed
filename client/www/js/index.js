@@ -59,7 +59,7 @@ socket.on('game.begin', function () {
       var newTime = Date.now();
       var timeGap = (newTime - lastTime);
       lastTime = newTime;
-      game.update(speedBoost * timeDirection * timeGap);
+      game.update(timeGap);
       gap = message.idealTime - game.getIdealGameTime();
     }
     game.update(gap);
@@ -87,28 +87,6 @@ socket.on('game.begin', function () {
   var startTouch = function(e) {
     // If F5 or i is pressed, trigger default action (reload page or launch dev tools)
     if (e.keyCode && (e.keyCode === 116 || e.keyCode === 73)) { return; }
-
-    // Start/pause
-    if (e.keyCode === 27) {
-      if (intervalId !== undefined) { pause(); } else { start(); }
-      return;
-    }
-
-    // Go back in time
-    if (e.keyCode === 13) {
-      timeDirection *= -1;
-      return;
-    }
-
-    // Increase/decrease speed
-    if (e.keyCode === 38) {
-      speedBoost *= 1.1;
-      return;
-    }
-    if (e.keyCode === 40) {
-      speedBoost /= 1.1;
-      return;
-    }
 
     if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
     e.preventDefault(); // preventing the touch from sliding the screen on mobile.
@@ -141,30 +119,20 @@ socket.on('game.begin', function () {
   /**
    * Main loop
    */
-  var lastTime
-    , intervalId = undefined
-    , timeDirection = 1
-    , speedBoost = 1
-    , paused = false
-    ;
+  var lastTime;
 
   function main () {
     var newTime = Date.now();
     var timeGap = (newTime - lastTime);
     lastTime = newTime;
-    game.update(speedBoost * timeDirection * timeGap);
+    game.update(timeGap);
 
-    if (!paused) { setTimeout(main, 40); }
+    setTimeout(main, 40);
   }
 
   function start () {
-    paused = false;
     lastTime = Date.now();
     main();
-  }
-
-  function pause () {
-    paused = true;
   }
 
   // Start game after delay specified by the server
