@@ -162,7 +162,6 @@ Robot.prototype.reposition = function(tile) {
  */
 Robot.prototype.startJump = function(dontRecordJump) {
   if (! this.isJumping()) {
-    console.log("STARTING JUMP AT " + this.cumulativeMovement);
     this.jumpStartedAt = { x: this.x, y: this.y };
     this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });
   }
@@ -305,24 +304,28 @@ Robot.prototype.updatePosition = function (timeGap) {
     }
   } else {   // Going forward in time
     var movementToPerform, registerControlPoint, controlPoint
-      , remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
+      , nextCenterPosition, distanceToNextCenter;
 
     while (movement > 0) {
-      var jump = this.analyzeJump();
-      if (jump.isJumping) { remainingJump = Robot.jumpLength - jump.distanceSinceStart; }
-
       nextCenterPosition = this.getNextCenter();
       distanceToNextCenter = this.movementTo(nextCenterPosition);
       registerControlPoint = (movement >= distanceToNextCenter);
 
+      // Move to next center except if there is a jump to replay before
       movementToPerform = Math.min(movement, distanceToNextCenter);
+      var movementToNextJumpReplay = this.getMovementToNextJump(movementToPerform);
+      if (movementToNextJumpReplay !== undefined) { movementToPerform = movementToNextJumpReplay; }
+
       movement -= movementToPerform;
       this.move(movementToPerform);
       this.cumulativeMovement += movementToPerform;
 
-      if (registerControlPoint) {
+      if (movementToNextJumpReplay !== undefined) {
+        this.startJump();
+        this.jumpsToReplay.pop();
+      } else if (registerControlPoint) {
         controlPoint = { position: { x: this.x, y: this.y } };
-        if (!jump.isJumping) {
+        if (!this.analyzeJump().isJumping) {
           this.direction = this.nextDirection();
         }
         controlPoint.direction = this.direction;
@@ -331,6 +334,21 @@ Robot.prototype.updatePosition = function (timeGap) {
     }
   }
 }
+
+
+/**
+ * Get movement to next jump to replay, if any, before given movment is done (return undefined if no jump)
+ */
+Robot.prototype.getMovementToNextJump = function (movement) {
+  var nextJumpCumulativeMovement = this.jumpsToReplay.getLast();
+  if (nextJumpCumulativeMovement === undefined) { return undefined; }
+
+  if (this.cumulativeMovement + movement >= nextJumpCumulativeMovement) {
+    return nextJumpCumulativeMovement - this.cumulativeMovement;
+  } else {
+    return undefined;
+  }
+};
 
 
 /**
@@ -469,12 +487,6 @@ Robot.prototype.getNextCenter = function () {
   if (this.direction === Robot.directions.LEFT) {
     x -= 1 / 2;
     if (x === Math.floor(x)) { x -= 0.01; }   // Tiles are exclusive of left border
-  }
-
-  if (!this.getTile(x, y)) {
-    console.log("COULDNT GET TILE");
-    console.log("Robot: " + this.x + ' - ' + this.y + ' - ' + this.direction);
-    console.log(x + ' - ' + y);
   }
 
   return this.getTile(x, y).center();
