@@ -59,50 +59,6 @@ CyclicArray.prototype.reverseExecute = function (fn) {
 
 
 /**
- * Simple discrete time series for representing when jumps started
- * Assumes points are set monotonically in time (always after the latest one) which will be the case here
- */
-function JumpTimeSeries () {
-  this.times = [];
-}
-
-JumpTimeSeries.prototype.set = function (time) {
-  this.times.push(time);
-};
-
-// Get time of latest jump before given time (inclusive)
-JumpTimeSeries.prototype.getLastBefore = function (time) {
-  if (this.times.length === 0 || this.times[0] > time) { return null; }
-
-  // Could use a dichotomic approach to optimize here
-  for (var i = 0; i < this.times.length; i += 1) {
-    if (this.times[i] > time) { break; }
-  }
-  return this.times[i - 1];
-};
-
-// Get time of earliest jump after given time (inclusive)
-JumpTimeSeries.prototype.getFirstAfter = function (time) {
-  if (this.times.length === 0 || this.times[this.times.length - 1] < time) { return null; }
-
-  // Could use a dichotomic approach to optimize here
-  for (var i = this.times.length - 1; i >= 0; i -= 1) {
-    if (this.times[i] < time) { break; }
-  }
-  return this.times[i + 1];
-};
-
-
-var jts = new JumpTimeSeries();
-jts.set(10);
-jts.set(20);
-jts.set(30);
-jts.set(40);
-jts.set(50);
-
-
-
-/**
  * Robot (can be player or an ennemy)
  */
 function Robot(tile, level, speed, isEnnemy) {
@@ -125,6 +81,12 @@ function Robot(tile, level, speed, isEnnemy) {
   this.listeners = {};
 
   this.alwaysTurnsRight = false; // enables maximal theoretical exploration
+
+  // Keep track of jumps to replay after going back in time using a stack implemented by a simple array
+  // Might be a good idea to share this data with the control points but the current data structure is not the right one
+  this.jumpsToReplay = [];
+  this.jumpsToReplay.getLast = function () { if (this.length === 0) { return undefined; } else { return this[this.length - 1]; } } ;   // For convenience and sticking to stack API
+  this.cumulativeMovement = 0;
 }
 
 Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
@@ -199,8 +161,8 @@ Robot.prototype.reposition = function(tile) {
  * TODO: implement jump cooldown here
  */
 Robot.prototype.startJump = function(dontRecordJump) {
-  console.log(this.level.getIdealGameTime());
   if (! this.isJumping()) {
+    console.log("STARTING JUMP AT " + this.cumulativeMovement);
     this.jumpStartedAt = { x: this.x, y: this.y };
     this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });
   }
@@ -292,7 +254,7 @@ Robot.prototype.analyzeJump = function () {
     n++;
   }
 
-  return {isJumping: false, distanceSinceStart: 0};
+  return { isJumping: false, distanceSinceStart: 0 };
 }
 
 
@@ -325,10 +287,17 @@ Robot.prototype.updatePosition = function (timeGap) {
       controlPoint = this.controlPoints.getLatest();
       staleControlPoint = this.movementTo(controlPoint.position) < movement;
       movementToPerform = Math.min(movement, this.movementTo(controlPoint.position));
+
       movement -= movementToPerform;
       this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
+      this.cumulativeMovement -= movementToPerform;
 
       if (staleControlPoint) {
+        // Remember jumps that were performed to replay them when we move forward again
+        if (controlPoint.jumpStart) {
+          this.jumpsToReplay.push(this.cumulativeMovement);
+        }
+
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
 
@@ -337,7 +306,6 @@ Robot.prototype.updatePosition = function (timeGap) {
           this.x = killedPosition.x; this.y = killedPosition.y; }
       }
     }
-
   } else {   // Going forward in time
     var movementToPerform, registerControlPoint, controlPoint
       , jumpEnd, remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
@@ -352,8 +320,10 @@ Robot.prototype.updatePosition = function (timeGap) {
 
       movementToPerform = Math.min(movement, distanceToNextCenter);
       if (jump.isJumping) { movementToPerform = Math.min(movementToPerform, remainingJump); }
+
       movement -= movementToPerform;
       this.move(movementToPerform);
+      this.cumulativeMovement += movementToPerform;
 
       if (registerControlPoint) {
         controlPoint = {};
