@@ -81,6 +81,12 @@ function Robot(tile, level, speed, isEnnemy) {
   this.listeners = {};
 
   this.alwaysTurnsRight = false; // enables maximal theoretical exploration
+
+  // Keep track of jumps to replay after going back in time using a stack implemented by a simple array
+  // Might be a good idea to share this data with the control points but the current data structure is not the right one
+  this.jumpsToReplay = [];
+  this.jumpsToReplay.getLast = function () { if (this.length === 0) { return undefined; } else { return this[this.length - 1]; } } ;   // For convenience and sticking to stack API
+  this.cumulativeMovement = 0;
 }
 
 Robot.directions = { RIGHT: 'right', UP: 'up', LEFT: 'left', DOWN: 'down' };
@@ -149,8 +155,12 @@ Robot.prototype.reposition = function(tile) {
 }
 
 
-// TODO: implement jump cooldown here
-Robot.prototype.startJump = function() {
+/**
+ * Start a jump at the current position, and record it in this robot's list of jumps
+ * @param {Boolean} dontRecordJump Optional, defaults to false, if true, don't record jump as it's a replayed one
+ * TODO: implement jump cooldown here
+ */
+Robot.prototype.startJump = function(dontRecordJump) {
   if (! this.isJumping()) {
     this.jumpStartedAt = { x: this.x, y: this.y };
     this.controlPoints.push({ position: this.jumpStartedAt, direction: this.direction, jumpStart: true });
@@ -233,17 +243,17 @@ Robot.prototype.analyzeJump = function () {
     distance += absDistance(controlPoint.position, lastPoint);
     lastPoint = controlPoint.position;
     if (controlPoint.jumpStart) {
-      if (distance < Robot.jumpLength) {
+      if (distance <= Robot.jumpLength) {
         return { isJumping: true, distanceSinceStart: distance };
       } else {
         break;
       }
     }
-    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled || controlPoint.jumpEnd) { break; }
+    if (distance > Robot.jumpLength || controlPoint.killedPosition || controlPoint.justKilled) { break; }
     n++;
   }
 
-  return {isJumping: false, distanceSinceStart: 0};
+  return { isJumping: false, distanceSinceStart: 0 };
 }
 
 
@@ -255,9 +265,6 @@ Robot.prototype.analyzeJump = function () {
 Robot.prototype.updatePosition = function (timeGap) {
   // Get hit by ennemy: immediately stop jump and go back to start
   if (! this.isEnnemy && this.checkInterception()) {
-    if (this.isJumping()) {
-      this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, jumpEnd: true, jumpStartedAt: this.jumpStartedAt });
-    }
     this.jumpStartedAt = undefined;
     this.controlPoints.push({ position: { x: this.x, y: this.y }, direction: this.direction, killedPosition: true });
     this.reposition(this.level.tileTable[0][0]);
@@ -276,48 +283,49 @@ Robot.prototype.updatePosition = function (timeGap) {
       controlPoint = this.controlPoints.getLatest();
       staleControlPoint = this.movementTo(controlPoint.position) < movement;
       movementToPerform = Math.min(movement, this.movementTo(controlPoint.position));
+
       movement -= movementToPerform;
       this.move(movementToPerform, getOppositeDirection(controlPoint.direction));
+      this.cumulativeMovement -= movementToPerform;
 
       if (staleControlPoint) {
+        // Remember jumps that were performed to replay them when we move forward again
+        if (controlPoint.jumpStart) {
+          this.jumpsToReplay.push(this.cumulativeMovement);
+        }
+
         this.controlPoints.staleLatest();
         this.direction = this.controlPoints.getLatest().direction;
 
-        //if (controlPoint.jumpStart) { this.jumpStartedAt = undefined; }
-        //if (controlPoint.jumpEnd) { this.jumpStartedAt = controlPoint.jumpStartedAt; }
         if (controlPoint.justKilled) {
           var killedPosition = this.controlPoints.pop().position;
           this.x = killedPosition.x; this.y = killedPosition.y; }
       }
     }
-
   } else {   // Going forward in time
     var movementToPerform, registerControlPoint, controlPoint
-      , jumpEnd, remainingJump, nextCenterPosition, distanceToNextCenter, remainingJump;
+      , nextCenterPosition, distanceToNextCenter;
 
     while (movement > 0) {
-      var jump = this.analyzeJump();
-      if (jump.isJumping) { remainingJump = Robot.jumpLength - jump.distanceSinceStart; }
-
       nextCenterPosition = this.getNextCenter();
       distanceToNextCenter = this.movementTo(nextCenterPosition);
-      registerControlPoint = (movement >= distanceToNextCenter) || (jump.isJumping && movement >= remainingJump);
+      registerControlPoint = (movement >= distanceToNextCenter);
 
+      // Move to next center except if there is a jump to replay before
       movementToPerform = Math.min(movement, distanceToNextCenter);
-      if (jump.isJumping) { movementToPerform = Math.min(movementToPerform, remainingJump); }
+      var movementToNextJumpReplay = this.getMovementToNextJump(movementToPerform);
+      if (movementToNextJumpReplay !== undefined) { movementToPerform = movementToNextJumpReplay; }
+
       movement -= movementToPerform;
       this.move(movementToPerform);
+      this.cumulativeMovement += movementToPerform;
 
-      if (registerControlPoint) {
-        controlPoint = {};
-        if (jump.isJumping && remainingJump <= distanceToNextCenter) {
-          jumpEnd = { x: this.x, y: this.y };
-          jumpEnd = Robot.translate(jumpEnd, remainingJump, this.direction);
-          controlPoint.position = jumpEnd;
-          controlPoint.jumpEnd = true;
-          controlPoint.jumpStartedAt = this.jumpStartedAt;
-        } else {
-          controlPoint.position = nextCenterPosition;
+      if (movementToNextJumpReplay !== undefined) {
+        this.startJump();
+        this.jumpsToReplay.pop();
+      } else if (registerControlPoint) {
+        controlPoint = { position: { x: this.x, y: this.y } };
+        if (!this.analyzeJump().isJumping) {
           this.direction = this.nextDirection();
         }
         controlPoint.direction = this.direction;
@@ -326,6 +334,21 @@ Robot.prototype.updatePosition = function (timeGap) {
     }
   }
 }
+
+
+/**
+ * Get movement to next jump to replay, if any, before given movment is done (return undefined if no jump)
+ */
+Robot.prototype.getMovementToNextJump = function (movement) {
+  var nextJumpCumulativeMovement = this.jumpsToReplay.getLast();
+  if (nextJumpCumulativeMovement === undefined) { return undefined; }
+
+  if (this.cumulativeMovement + movement >= nextJumpCumulativeMovement) {
+    return nextJumpCumulativeMovement - this.cumulativeMovement;
+  } else {
+    return undefined;
+  }
+};
 
 
 /**
@@ -464,12 +487,6 @@ Robot.prototype.getNextCenter = function () {
   if (this.direction === Robot.directions.LEFT) {
     x -= 1 / 2;
     if (x === Math.floor(x)) { x -= 0.01; }   // Tiles are exclusive of left border
-  }
-
-  if (!this.getTile(x, y)) {
-    console.log("COULDNT GET TILE");
-    console.log("Robot: " + this.x + ' - ' + this.y + ' - ' + this.direction);
-    console.log(x + ' - ' + y);
   }
 
   return this.getTile(x, y).center();

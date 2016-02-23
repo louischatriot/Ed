@@ -2,6 +2,10 @@ var renderer = new Renderer()
   , game, startGameAfter
   , players = []
   , you
+  , actionId   // Random id every time we send a jump
+               // After a jump is sent to server, don't update client position
+               // before we receive the status whose id matches what we sent.
+               // This avoids seeing client flicker when client ping is too high
   ;
 
 /**
@@ -58,10 +62,13 @@ socket.on('game.begin', function () {
       game.update(speedBoost * timeDirection * timeGap);
       gap = message.idealTime - game.getIdealGameTime();
     }
-
     game.update(gap);
 
+    if (message.actionId === actionId) { actionId = undefined; }
+
     message.players.forEach(function (p) {
+      if (actionId && p.id === you.id) { return; }   // Still waiting for our own request
+
       var player = game.getPlayerById(p.id);
       player.x = p.x;
       player.y = p.y;
@@ -72,7 +79,6 @@ socket.on('game.begin', function () {
     game.update(gap * (-1));
     game.log("Client state updated");
   });
-
 
 
   /**
@@ -110,7 +116,8 @@ socket.on('game.begin', function () {
       game.log("Sent jump command", true);
       you.startJump();
       readyToJump = false;
-      socket.emit('action.jump', { actualTime: game.getGameTime(), idealTime: game.getIdealGameTime(), jumpStartedAt: you.jumpStartedAt });
+      actionId = Math.random().toString();
+      socket.emit('action.jump', { actualTime: game.getGameTime(), idealTime: game.getIdealGameTime(), jumpStartedAt: you.jumpStartedAt, actionId: actionId });
     }
   }
 

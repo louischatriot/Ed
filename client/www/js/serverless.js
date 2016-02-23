@@ -1,41 +1,14 @@
+var readyToJump = true;
 var renderer = new Renderer();
 
-var currentKyu = 25;
-
-if (localStorage.getItem('EdKyu')) {
-	currentKyu = JSON.parse(localStorage.getItem('EdKyu'));
-	currentKyu = 20;
-}
-else {
-	localStorage.setItem( 'EdKyu', JSON.stringify(25)); // By default starts at 25 kyu
-}
-
-
-var level = new Level({tileTableWidth: renderer.tileTableWidth, tileTableHeight: renderer.tileTableHeight});
-level.kyu = currentKyu;
+var level = new Level({tileTableWidth: 30, tileTableHeight: 20});
 level.createNewLevel();
-
-//level.addNewPlayer();
-//var theAI = new AI(level,level.playerTable[1]);
-
-
-// transform a level into a table with the minimum amount of information
-
-
-var string = level.serialize();
-level = new Level({serializedVersion: string});
-
-p = level.addNewPlayer();
+var p = level.addNewPlayer();
 
 
 // Remains to be seen: should we render a new frame every time the physics engine is updated?
 level.on('positions.updated', function () { renderer.drawNewFrame(level); });
 level.on('background.updated', function () { renderer.newBackground(); });
-
-
-// Should this next line be in the AI constructor?
-//level.playerTable[1].on('justPassedIntersection', function () { theAI.makeDecisionOnNextJump(); });
-
 
 
 var startTouch = function(e) {
@@ -64,15 +37,18 @@ var startTouch = function(e) {
     return;
   }
 
-  //if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
+  if (e.keyCode !== 32) { return }   // Uncomment to avoid noise during debugging
 	e.preventDefault(); // preventing the touch from sliding the screen on mobile.
-	level.startTouch();
+  if (readyToJump) {
+	  p.startJump();
+    readyToJump = false;
+  }
 }
 
 
 var endTouch = function(e) {
 	e.preventDefault();
-	level.endTouch();
+	readyToJump = true;
 }
 
 
@@ -115,4 +91,4 @@ function pause () {
 
 
 level.update(0);
-start();
+pause();

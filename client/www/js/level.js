@@ -11,7 +11,6 @@ function Level(_opts) {
   this.ennemyTable = [];
   this.ennemySpeed = 0.02 / 30;
   this.playerSpeed = 0.06 / 30;
-  this.currentlyPlaying = true;   // Use to pause the game
   this.currentTime = 0;
 
   this.ennemyDifficulty = 0;   // Higher means more ennemies will appear. Harder. Standard=0.1
@@ -106,9 +105,7 @@ Level.prototype.emit = function (evt, message) {
 
 
 Level.prototype.nextDifficulty = function() {
-  this.currentlyPlaying = false;
   this.createNewLevel();
-  this.currentlyPlaying = true;
 }
 
 
@@ -118,6 +115,8 @@ Level.prototype.addNewPlayer = function(_id) {
   newPlayer.reposition(this.startingTile);
   this.playerTable.push(newPlayer);
   newPlayer.on('win', function () { this.nextDifficulty(); });
+
+  return newPlayer;
 }
 
 
@@ -444,11 +443,9 @@ Level.prototype.update = function (timeGap, dontUpdate) {
     this.currentTime += timeGap;
   }
 
-  if (this.currentlyPlaying) {
-    for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
-    for (var i = 0; i < this.playerTable.length; i++) { this.playerTable[i].updatePosition(timeGap); }
-    if (! dontUpdate) { this.emit('positions.updated'); }
-  }
+  for (var i = 0; i < this.ennemyTable.length; i++) { this.ennemyTable[i].updatePosition(timeGap); }
+  for (var i = 0; i < this.playerTable.length; i++) { this.playerTable[i].updatePosition(timeGap); }
+  if (! dontUpdate) { this.emit('positions.updated'); }
 }
 
 
